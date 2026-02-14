@@ -34,11 +34,49 @@ class Game {
             setTimeout(() => this._resize(), 150);
         });
 
+        // 모바일: 첫 터치 시 전체화면 요청
+        if (this.isMobile) {
+            this._setupFullscreen();
+        }
+
         this.loop = new GameLoop(
             (dt) => this._update(dt),
             () => this._draw()
         );
         this.loop.start();
+    }
+
+    _setupFullscreen() {
+        const el = document.documentElement;
+
+        const requestFS = () => {
+            const fs = el.requestFullscreen
+                || el.webkitRequestFullscreen
+                || el.mozRequestFullScreen
+                || el.msRequestFullscreen;
+
+            if (fs) {
+                fs.call(el).then(() => {
+                    // 가로모드 잠금 시도
+                    if (screen.orientation && screen.orientation.lock) {
+                        screen.orientation.lock('landscape').catch(() => {});
+                    }
+                    setTimeout(() => this._resize(), 200);
+                }).catch(() => {});
+            }
+            // 한 번만 실행
+            document.removeEventListener('touchstart', requestFS);
+        };
+
+        document.addEventListener('touchstart', requestFS, { once: true });
+
+        // 전체화면 변경 시 리사이즈
+        document.addEventListener('fullscreenchange', () => {
+            setTimeout(() => this._resize(), 200);
+        });
+        document.addEventListener('webkitfullscreenchange', () => {
+            setTimeout(() => this._resize(), 200);
+        });
     }
 
     _resize() {
