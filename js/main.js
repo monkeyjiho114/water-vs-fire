@@ -9,9 +9,10 @@ class Game {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.scale = 1;
+        this.scaleX = 1;
+        this.scaleY = 1;
         this.dpr = 1;
-        this.offsetX = 0;
-        this.offsetY = 0;
+        this.isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
         this.input = new InputManager();
         this.stateManager = new GameStateManager(this);
@@ -45,16 +46,19 @@ class Game {
         const w = window.innerWidth;
         const h = window.innerHeight;
 
-        // 비율 유지하면서 화면에 맞춤 (잘리지 않게 min 사용)
-        const scaleX = w / BASE_WIDTH;
-        const scaleY = h / BASE_HEIGHT;
-        this.scale = Math.min(scaleX, scaleY);
+        if (this.isMobile) {
+            // 모바일: 화면을 꽉 채움 (X, Y 독립 스케일)
+            this.scaleX = w / BASE_WIDTH;
+            this.scaleY = h / BASE_HEIGHT;
+        } else {
+            // PC: 비율 유지
+            const s = Math.min(w / BASE_WIDTH, h / BASE_HEIGHT);
+            this.scaleX = s;
+            this.scaleY = s;
+        }
 
-        // 게임 영역을 화면 중앙에 배치
-        const gameW = BASE_WIDTH * this.scale;
-        const gameH = BASE_HEIGHT * this.scale;
-        this.offsetX = (w - gameW) / 2;
-        this.offsetY = (h - gameH) / 2;
+        // 통합 scale (터치 좌표 변환 등에 사용)
+        this.scale = this.scaleX;
 
         // 캔버스는 화면 전체 커버
         this.canvas.style.width = w + 'px';
@@ -88,20 +92,13 @@ class Game {
         const ctx = this.ctx;
         const dpr = this.dpr;
 
-        // 전체 화면 클리어 (검은 배경 = 레터박스)
+        // 전체 화면 클리어
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
         ctx.save();
 
-        // DPR 보정 → 오프셋으로 중앙 배치 → 게임 스케일 적용
-        ctx.scale(dpr, dpr);
-        ctx.translate(this.offsetX, this.offsetY);
-        ctx.scale(this.scale, this.scale);
-
-        // 게임 영역 클리핑 (게임 밖으로 그려지는 것 방지)
-        ctx.beginPath();
-        ctx.rect(0, 0, BASE_WIDTH, BASE_HEIGHT);
-        ctx.clip();
+        // DPR 보정 → 화면 꽉 채우기 스케일 (X, Y 독립)
+        ctx.scale(dpr * this.scaleX, dpr * this.scaleY);
 
         this.stateManager.draw(ctx);
 

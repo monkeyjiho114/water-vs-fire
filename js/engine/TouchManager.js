@@ -4,7 +4,7 @@ import { BASE_WIDTH, BASE_HEIGHT } from '../data/constants.js';
  * 모바일 터치 컨트롤 매니저
  * - 왼쪽 하단: 가상 조이스틱 (이동)
  * - 오른쪽 하단: 액션 버튼들 (점프, 발사, 얼리기)
- * - 화면 상단 탭: 메뉴 전용 (확인/일시정지)
+ * - 메뉴/전환 화면: 아무 곳이나 터치 = 확인
  */
 export class TouchManager {
     constructor(canvas, game) {
@@ -34,6 +34,9 @@ export class TouchManager {
         this.justConfirm = false;
         this.justPause = false;
 
+        // 현재 게임 상태 (playing / menu)
+        this.currentState = 'menu';
+
         // 조이스틱 상태
         this.joystick = {
             active: false,
@@ -48,7 +51,7 @@ export class TouchManager {
         // 활성 터치 추적
         this.activeTouches = new Map();
 
-        // 버튼 영역 (게임 좌표 기준, draw 시 업데이트)
+        // 버튼 영역 (게임 좌표 기준)
         this.buttons = {};
 
         if (this.isMobile) {
@@ -71,15 +74,14 @@ export class TouchManager {
         this.canvas.addEventListener('touchcancel', (e) => this._onTouchEnd(e), opts);
     }
 
-    // 화면 좌표 → 게임 좌표 변환 (offset + scale 보정)
+    // 화면 좌표 → 게임 좌표 변환 (독립 scaleX/scaleY 지원)
     _toGameCoords(touch) {
         const rect = this.canvas.getBoundingClientRect();
-        const scale = this.game.scale;
-        const offsetX = this.game.offsetX || 0;
-        const offsetY = this.game.offsetY || 0;
+        const scaleX = this.game.scaleX || this.game.scale || 1;
+        const scaleY = this.game.scaleY || this.game.scale || 1;
         return {
-            x: (touch.clientX - rect.left - offsetX) / scale,
-            y: (touch.clientY - rect.top - offsetY) / scale,
+            x: (touch.clientX - rect.left) / scaleX,
+            y: (touch.clientY - rect.top) / scaleY,
         };
     }
 
@@ -89,7 +91,7 @@ export class TouchManager {
             const pos = this._toGameCoords(touch);
             this.activeTouches.set(touch.identifier, pos);
 
-            // 메뉴 난이도 터치 감지 (Y: 300~354 영역)
+            // 메뉴 난이도 터치 감지 (Y: 300~360 영역)
             if (pos.y >= 300 && pos.y <= 360) {
                 const center = BASE_WIDTH / 2;
                 for (let i = 0; i < 3; i++) {
@@ -100,8 +102,9 @@ export class TouchManager {
                 }
             }
 
-            // 조이스틱 영역 (왼쪽 절반 하단)
-            if (pos.x < BASE_WIDTH / 2 && pos.y > BASE_HEIGHT * 0.45 && !this.joystick.active) {
+            // 조이스틱 영역 (왼쪽 절반 하단, playing 상태일 때만)
+            if (this.currentState === 'playing' &&
+                pos.x < BASE_WIDTH / 2 && pos.y > BASE_HEIGHT * 0.45 && !this.joystick.active) {
                 this.joystick.active = true;
                 this.joystick.touchId = touch.identifier;
                 this.joystick.baseX = pos.x;
@@ -148,7 +151,6 @@ export class TouchManager {
 
         if (this.joystick.active) {
             const dx = this.joystick.stickX - this.joystick.baseX;
-            const dy = this.joystick.stickY - this.joystick.baseY;
             const deadzone = 12;
 
             if (dx < -deadzone) this.touchLeft = true;
@@ -165,15 +167,14 @@ export class TouchManager {
         for (const [id, pos] of this.activeTouches) {
             if (this.joystick.active && id === this.joystick.touchId) continue;
 
-            // 각 버튼 히트 테스트
-            if (this._hitTest(pos, this.buttons.jump)) this.touchJump = true;
-            if (this._hitTest(pos, this.buttons.shoot)) this.touchShoot = true;
-            if (this._hitTest(pos, this.buttons.freeze)) this.touchFreeze = true;
-            if (this._hitTest(pos, this.buttons.confirm)) this.touchConfirm = true;
-            if (this._hitTest(pos, this.buttons.pause)) this.touchPause = true;
-
-            // 게임 화면 상단 영역 탭 = 확인 (메뉴/전환 화면용)
-            if (pos.y < BASE_HEIGHT * 0.4) {
+            if (this.currentState === 'playing') {
+                // 플레이 중: 버튼 히트 테스트
+                if (this._hitTest(pos, this.buttons.jump)) this.touchJump = true;
+                if (this._hitTest(pos, this.buttons.shoot)) this.touchShoot = true;
+                if (this._hitTest(pos, this.buttons.freeze)) this.touchFreeze = true;
+                if (this._hitTest(pos, this.buttons.pause)) this.touchPause = true;
+            } else {
+                // 메뉴/전환 화면: 아무 곳 터치 = confirm
                 this.touchConfirm = true;
             }
         }
@@ -200,6 +201,8 @@ export class TouchManager {
 
     // 버튼 영역 정의 (게임 상태에 따라 다름)
     updateButtonLayout(state, freezeEnabled) {
+        this.currentState = state;
+
         const bSize = 56;
         const pad = 14;
         const rightBase = BASE_WIDTH - pad - bSize;
@@ -236,14 +239,6 @@ export class TouchManager {
             w: 44, h: 32,
             label: '| |', color: 'rgba(255,255,255,0.4)'
         };
-
-        // 확인 버튼 (화면 중앙 하단 — 메뉴/전환 화면용)
-        this.buttons.confirm = {
-            x: BASE_WIDTH / 2 - 70,
-            y: BASE_HEIGHT - 80,
-            w: 140, h: 50,
-            label: 'TAP', color: 'rgba(255,255,255,0.3)'
-        };
     }
 
     // 터치 컨트롤 그리기
@@ -253,9 +248,7 @@ export class TouchManager {
         ctx.save();
         ctx.globalAlpha = 0.5;
 
-        const isPlaying = state === 'playing' || state === 'paused';
-
-        if (isPlaying) {
+        if (state === 'playing') {
             this._drawJoystick(ctx);
             this._drawButton(ctx, this.buttons.jump, this.touchJump);
             this._drawButton(ctx, this.buttons.shoot, this.touchShoot);
@@ -336,7 +329,6 @@ export class TouchManager {
         ctx.globalAlpha = 0.4;
         ctx.fillStyle = 'rgba(255,255,255,0.2)';
         ctx.beginPath();
-        // 둥근 사각형
         const r = 6;
         ctx.moveTo(btn.x + r, btn.y);
         ctx.lineTo(btn.x + btn.w - r, btn.y);
