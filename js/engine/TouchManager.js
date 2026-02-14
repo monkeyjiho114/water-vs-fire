@@ -71,10 +71,11 @@ export class TouchManager {
         this.canvas.addEventListener('touchcancel', (e) => this._onTouchEnd(e), opts);
     }
 
-    // 화면 좌표 → 게임 좌표 변환
+    // 화면 좌표 → 게임 좌표 변환 (CSS 크기 기준)
     _toGameCoords(touch) {
         const rect = this.canvas.getBoundingClientRect();
         const scale = this.game.scale;
+        // clientX/Y → CSS 내 위치 → 게임 좌표 (scale로 나눔)
         return {
             x: (touch.clientX - rect.left) / scale,
             y: (touch.clientY - rect.top) / scale,

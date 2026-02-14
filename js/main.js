@@ -23,9 +23,12 @@ class Game {
         // 모바일 방향 전환 대응
         if (screen.orientation) {
             screen.orientation.addEventListener('change', () => {
-                setTimeout(() => this._resize(), 100);
+                setTimeout(() => this._resize(), 150);
             });
         }
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => this._resize(), 150);
+        });
 
         this.loop = new GameLoop(
             (dt) => this._update(dt),
@@ -35,15 +38,28 @@ class Game {
     }
 
     _resize() {
+        const dpr = window.devicePixelRatio || 1;
         const w = window.innerWidth;
         const h = window.innerHeight;
-        // 800x600 비율을 유지하면서 전체화면에 맞춤
+
+        // 화면을 꽉 채우도록 스케일 (가로모드 전용)
         const scaleX = w / BASE_WIDTH;
         const scaleY = h / BASE_HEIGHT;
-        this.scale = Math.min(scaleX, scaleY);
+        this.scale = Math.max(scaleX, scaleY); // max로 화면 꽉 채움
 
-        this.canvas.width = BASE_WIDTH * this.scale;
-        this.canvas.height = BASE_HEIGHT * this.scale;
+        const canvasW = w;
+        const canvasH = h;
+
+        // CSS 크기 = 화면 크기
+        this.canvas.style.width = canvasW + 'px';
+        this.canvas.style.height = canvasH + 'px';
+
+        // 실제 캔버스 해상도 = CSS 크기 × devicePixelRatio (선명도 확보)
+        this.canvas.width = canvasW * dpr;
+        this.canvas.height = canvasH * dpr;
+
+        // 내부에서 사용할 DPR 저장
+        this.dpr = dpr;
     }
 
     // 게임 좌표 기준 바닥 Y
@@ -65,8 +81,12 @@ class Game {
 
     _draw() {
         const ctx = this.ctx;
+        const dpr = this.dpr;
+
         ctx.save();
-        ctx.scale(this.scale, this.scale);
+
+        // DPR 보정 + 게임 스케일 적용
+        ctx.scale(dpr * this.scale, dpr * this.scale);
 
         // 화면 클리어
         ctx.clearRect(0, 0, BASE_WIDTH, BASE_HEIGHT);

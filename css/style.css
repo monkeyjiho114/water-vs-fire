@@ -30,13 +30,22 @@ body {
 
 canvas {
     display: block;
-    image-rendering: pixelated;
     touch-action: none;
+    /* 픽셀아트 스타일 제거 — 선명도 우선 */
+    image-rendering: auto;
+}
+
+/* iOS safe area 대응 */
+@supports (padding: env(safe-area-inset-left)) {
+    body {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
 }
 
 /* iOS PWA 전체화면 지원 */
 @supports (-webkit-touch-callout: none) {
-    body {
-        min-height: -webkit-fill-available;
+    html, body {
+        height: -webkit-fill-available;
     }
 }
