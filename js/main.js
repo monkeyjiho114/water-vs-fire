@@ -47,9 +47,20 @@ class Game {
         const h = window.innerHeight;
 
         if (this.isMobile) {
-            // 모바일: 화면을 꽉 채움 (X, Y 독립 스케일)
-            this.scaleX = w / BASE_WIDTH;
-            this.scaleY = h / BASE_HEIGHT;
+            // 모바일: 화면을 꽉 채우되, 가로 비율 최대 1.25배까지만 허용
+            const rawScaleX = w / BASE_WIDTH;
+            const rawScaleY = h / BASE_HEIGHT;
+            const maxStretch = 1.25; // 가로/세로 비율 차이 최대 25%
+            const ratio = rawScaleX / rawScaleY;
+
+            if (ratio > maxStretch) {
+                // 가로가 너무 길면 → 세로 기준으로 맞추고 가로는 최대치로 제한
+                this.scaleY = rawScaleY;
+                this.scaleX = rawScaleY * maxStretch;
+            } else {
+                this.scaleX = rawScaleX;
+                this.scaleY = rawScaleY;
+            }
         } else {
             // PC: 비율 유지
             const s = Math.min(w / BASE_WIDTH, h / BASE_HEIGHT);
@@ -60,13 +71,17 @@ class Game {
         // 통합 scale (터치 좌표 변환 등에 사용)
         this.scale = this.scaleX;
 
-        // 캔버스는 화면 전체 커버
-        this.canvas.style.width = w + 'px';
-        this.canvas.style.height = h + 'px';
+        // 실제 게임 영역 크기
+        const gameW = BASE_WIDTH * this.scaleX;
+        const gameH = BASE_HEIGHT * this.scaleY;
 
-        // 실제 캔버스 해상도 = 화면 크기 × DPR (선명도 확보)
-        this.canvas.width = w * dpr;
-        this.canvas.height = h * dpr;
+        // 캔버스 크기 = 게임 영역 (넘치면 중앙 정렬)
+        this.canvas.style.width = gameW + 'px';
+        this.canvas.style.height = gameH + 'px';
+
+        // 실제 캔버스 해상도 = 게임 영역 × DPR (선명도 확보)
+        this.canvas.width = gameW * dpr;
+        this.canvas.height = gameH * dpr;
 
         this.dpr = dpr;
     }
