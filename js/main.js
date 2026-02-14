@@ -9,6 +9,9 @@ class Game {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.scale = 1;
+        this.dpr = 1;
+        this.offsetX = 0;
+        this.offsetY = 0;
 
         this.input = new InputManager();
         this.stateManager = new GameStateManager(this);
@@ -42,23 +45,25 @@ class Game {
         const w = window.innerWidth;
         const h = window.innerHeight;
 
-        // 화면을 꽉 채우도록 스케일 (가로모드 전용)
+        // 비율 유지하면서 화면에 맞춤 (잘리지 않게 min 사용)
         const scaleX = w / BASE_WIDTH;
         const scaleY = h / BASE_HEIGHT;
-        this.scale = Math.max(scaleX, scaleY); // max로 화면 꽉 채움
+        this.scale = Math.min(scaleX, scaleY);
 
-        const canvasW = w;
-        const canvasH = h;
+        // 게임 영역을 화면 중앙에 배치
+        const gameW = BASE_WIDTH * this.scale;
+        const gameH = BASE_HEIGHT * this.scale;
+        this.offsetX = (w - gameW) / 2;
+        this.offsetY = (h - gameH) / 2;
 
-        // CSS 크기 = 화면 크기
-        this.canvas.style.width = canvasW + 'px';
-        this.canvas.style.height = canvasH + 'px';
+        // 캔버스는 화면 전체 커버
+        this.canvas.style.width = w + 'px';
+        this.canvas.style.height = h + 'px';
 
-        // 실제 캔버스 해상도 = CSS 크기 × devicePixelRatio (선명도 확보)
-        this.canvas.width = canvasW * dpr;
-        this.canvas.height = canvasH * dpr;
+        // 실제 캔버스 해상도 = 화면 크기 × DPR (선명도 확보)
+        this.canvas.width = w * dpr;
+        this.canvas.height = h * dpr;
 
-        // 내부에서 사용할 DPR 저장
         this.dpr = dpr;
     }
 
@@ -83,13 +88,20 @@ class Game {
         const ctx = this.ctx;
         const dpr = this.dpr;
 
+        // 전체 화면 클리어 (검은 배경 = 레터박스)
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
         ctx.save();
 
-        // DPR 보정 + 게임 스케일 적용
-        ctx.scale(dpr * this.scale, dpr * this.scale);
+        // DPR 보정 → 오프셋으로 중앙 배치 → 게임 스케일 적용
+        ctx.scale(dpr, dpr);
+        ctx.translate(this.offsetX, this.offsetY);
+        ctx.scale(this.scale, this.scale);
 
-        // 화면 클리어
-        ctx.clearRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
+        // 게임 영역 클리핑 (게임 밖으로 그려지는 것 방지)
+        ctx.beginPath();
+        ctx.rect(0, 0, BASE_WIDTH, BASE_HEIGHT);
+        ctx.clip();
 
         this.stateManager.draw(ctx);
 
