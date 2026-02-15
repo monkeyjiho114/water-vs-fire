@@ -135,8 +135,10 @@ class Game {
         // 터치 버튼 레이아웃 업데이트
         const sm = this.stateManager;
         const isPlaying = sm.state === STATES.PLAYING || sm.state === STATES.PAUSED;
+        const isShop = sm.state === STATES.SHOP;
         const freezeEnabled = sm.difficulty === 'hard';
-        this.touch.updateButtonLayout(isPlaying ? 'playing' : 'menu', freezeEnabled);
+        const touchState = isPlaying ? 'playing' : isShop ? 'shop' : 'menu';
+        this.touch.updateButtonLayout(touchState, freezeEnabled);
 
         this.stateManager.update(dt);
     }

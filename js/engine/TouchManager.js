@@ -20,19 +20,28 @@ export class TouchManager {
         this.touchFreeze = false;
         this.touchConfirm = false;
         this.touchPause = false;
+        this.touchShop = false;
 
         // 메뉴 전용: 난이도 터치 선택 (-1 = 없음, 0=easy, 1=normal, 2=hard)
         this.touchedDifficulty = -1;
+
+        // 상점 전용: 터치된 아이템/탭/뒤로가기
+        this.touchedShopItem = -1;
+        this.touchedShopTab = -1;
+        this.touchedShopBack = false;
+        this.touchedShopBuy = false;
 
         // justPressed 추적
         this._prevJump = false;
         this._prevFreeze = false;
         this._prevConfirm = false;
         this._prevPause = false;
+        this._prevShop = false;
         this.justJump = false;
         this.justFreeze = false;
         this.justConfirm = false;
         this.justPause = false;
+        this.justShop = false;
 
         // 현재 게임 상태 (playing / menu)
         this.currentState = 'menu';
@@ -91,14 +100,46 @@ export class TouchManager {
             const pos = this._toGameCoords(touch);
             this.activeTouches.set(touch.identifier, pos);
 
-            // 메뉴 난이도 터치 감지 (Y: 300~360 영역)
-            if (pos.y >= 300 && pos.y <= 360) {
-                const center = BASE_WIDTH / 2;
-                for (let i = 0; i < 3; i++) {
-                    const dx = center + (i - 1) * 130;
-                    if (pos.x >= dx - 55 && pos.x <= dx + 55) {
-                        this.touchedDifficulty = i;
+            if (this.currentState === 'menu') {
+                // 메뉴 난이도 터치 감지 (Y: 300~360 영역)
+                if (pos.y >= 300 && pos.y <= 360) {
+                    const center = BASE_WIDTH / 2;
+                    for (let i = 0; i < 3; i++) {
+                        const dx = center + (i - 1) * 130;
+                        if (pos.x >= dx - 55 && pos.x <= dx + 55) {
+                            this.touchedDifficulty = i;
+                        }
                     }
+                }
+                // 상점 버튼 터치 감지 (메뉴 하단 영역)
+                if (this.buttons.shop && this._hitTest(pos, this.buttons.shop)) {
+                    this.touchShop = true;
+                }
+            }
+
+            if (this.currentState === 'shop') {
+                // 탭 터치 감지 (Y: 95~125)
+                if (pos.y >= 95 && pos.y <= 125) {
+                    for (let t = 0; t < 2; t++) {
+                        const tx = BASE_WIDTH / 2 + (t - 0.5) * 200;
+                        if (pos.x >= tx - 85 && pos.x <= tx + 85) {
+                            this.touchedShopTab = t;
+                        }
+                    }
+                }
+                // 아이템 터치 감지 (Y: 140~ 영역, 아이템 높이 48px)
+                const listY = 140;
+                const itemH = 48;
+                if (pos.y >= listY && pos.y <= listY + 8 * itemH && pos.x >= 80 && pos.x <= BASE_WIDTH - 80) {
+                    this.touchedShopItem = Math.floor((pos.y - listY) / itemH);
+                }
+                // 뒤로가기 버튼
+                if (this.buttons.shopBack && this._hitTest(pos, this.buttons.shopBack)) {
+                    this.touchedShopBack = true;
+                }
+                // 구매/장착 버튼
+                if (this.buttons.shopBuy && this._hitTest(pos, this.buttons.shopBuy)) {
+                    this.touchedShopBuy = true;
                 }
             }
 
@@ -163,6 +204,7 @@ export class TouchManager {
         this.touchFreeze = false;
         this.touchConfirm = false;
         this.touchPause = false;
+        this.touchShop = false;
 
         for (const [id, pos] of this.activeTouches) {
             if (this.joystick.active && id === this.joystick.touchId) continue;
@@ -173,8 +215,17 @@ export class TouchManager {
                 if (this._hitTest(pos, this.buttons.shoot)) this.touchShoot = true;
                 if (this._hitTest(pos, this.buttons.freeze)) this.touchFreeze = true;
                 if (this._hitTest(pos, this.buttons.pause)) this.touchPause = true;
+            } else if (this.currentState === 'menu') {
+                // 메뉴: 상점 버튼 터치 확인
+                if (this.buttons.shop && this._hitTest(pos, this.buttons.shop)) {
+                    this.touchShop = true;
+                } else {
+                    this.touchConfirm = true;
+                }
+            } else if (this.currentState === 'shop') {
+                // 상점: 터치 무시 (touchStart에서 처리)
             } else {
-                // 메뉴/전환 화면: 아무 곳 터치 = confirm
+                // 기타 전환 화면: 아무 곳 터치 = confirm
                 this.touchConfirm = true;
             }
         }
@@ -192,16 +243,46 @@ export class TouchManager {
         this.justFreeze = this.touchFreeze && !this._prevFreeze;
         this.justConfirm = this.touchConfirm && !this._prevConfirm;
         this.justPause = this.touchPause && !this._prevPause;
+        this.justShop = this.touchShop && !this._prevShop;
 
         this._prevJump = this.touchJump;
         this._prevFreeze = this.touchFreeze;
         this._prevConfirm = this.touchConfirm;
         this._prevPause = this.touchPause;
+        this._prevShop = this.touchShop;
     }
 
     // 버튼 영역 정의 (게임 상태에 따라 다름)
     updateButtonLayout(state, freezeEnabled) {
         this.currentState = state;
+
+        if (state === 'menu') {
+            // 메뉴: 상점 버튼
+            const btnW = 100;
+            const btnH = 40;
+            this.buttons.shop = {
+                x: BASE_WIDTH / 2 - btnW / 2,
+                y: 455,
+                w: btnW, h: btnH,
+                label: '상점', color: '#FFD54F'
+            };
+            return;
+        }
+
+        if (state === 'shop') {
+            // 상점: 뒤로가기 & 구매/장착 버튼
+            this.buttons.shopBack = {
+                x: 20, y: BASE_HEIGHT - 55,
+                w: 80, h: 36,
+                label: '← 뒤로', color: 'rgba(255,255,255,0.3)'
+            };
+            this.buttons.shopBuy = {
+                x: BASE_WIDTH - 130, y: BASE_HEIGHT - 55,
+                w: 110, h: 36,
+                label: '구매/장착', color: '#FFD54F'
+            };
+            return;
+        }
 
         const bSize = 56;
         const pad = 14;

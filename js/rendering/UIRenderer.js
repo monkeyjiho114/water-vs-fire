@@ -83,9 +83,25 @@ export class UIRenderer {
         }
 
         // 상점 안내
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.font = '14px sans-serif';
-        if (!this.isMobile) {
+        if (this.isMobile) {
+            // 모바일: 상점 버튼 그리기
+            const btnW = 100;
+            const btnH = 40;
+            const btnX = BASE_WIDTH / 2 - btnW / 2;
+            const btnY = 455;
+            ctx.fillStyle = 'rgba(255,215,79,0.25)';
+            this._roundRect(ctx, btnX, btnY, btnW, btnH, 10);
+            ctx.fill();
+            ctx.strokeStyle = '#FFD54F';
+            ctx.lineWidth = 2;
+            this._roundRect(ctx, btnX, btnY, btnW, btnH, 10);
+            ctx.stroke();
+            ctx.fillStyle = '#FFD54F';
+            ctx.font = 'bold 16px sans-serif';
+            ctx.fillText('상점', BASE_WIDTH / 2, btnY + 26);
+        } else {
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.font = '14px sans-serif';
             ctx.fillText('S: 상점', BASE_WIDTH / 2, 470);
         }
 
@@ -120,7 +136,7 @@ export class UIRenderer {
         ctx.fillText(`코인: ${save.coins}`, BASE_WIDTH / 2, 80);
 
         // 탭
-        const tabNames = ['몸 스킨 (Q)', '총알 스킨 (E)'];
+        const tabNames = this.isMobile ? ['몸 스킨', '총알 스킨'] : ['몸 스킨 (Q)', '총알 스킨 (E)'];
         for (let t = 0; t < 2; t++) {
             const tx = BASE_WIDTH / 2 + (t - 0.5) * 200;
             const isActive = t === shopTab;
@@ -215,9 +231,31 @@ export class UIRenderer {
 
         // 하단 안내
         ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        ctx.font = '13px sans-serif';
-        ctx.fillText(this.isMobile ? '터치해서 선택/구매' : '↑↓: 선택 | Z: 구매/장착 | ESC: 나가기', BASE_WIDTH / 2, BASE_HEIGHT - 20);
+        if (this.isMobile) {
+            // 뒤로가기 버튼
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            this._roundRect(ctx, 20, BASE_HEIGHT - 55, 80, 36, 8);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillText('← 뒤로', 60, BASE_HEIGHT - 32);
+
+            // 구매/장착 버튼
+            ctx.fillStyle = 'rgba(255,215,79,0.25)';
+            this._roundRect(ctx, BASE_WIDTH - 130, BASE_HEIGHT - 55, 110, 36, 8);
+            ctx.fill();
+            ctx.strokeStyle = '#FFD54F';
+            ctx.lineWidth = 1.5;
+            this._roundRect(ctx, BASE_WIDTH - 130, BASE_HEIGHT - 55, 110, 36, 8);
+            ctx.stroke();
+            ctx.fillStyle = '#FFD54F';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillText('구매/장착', BASE_WIDTH - 75, BASE_HEIGHT - 32);
+        } else {
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.font = '13px sans-serif';
+            ctx.fillText('↑↓: 선택 | Z: 구매/장착 | ESC: 나가기', BASE_WIDTH / 2, BASE_HEIGHT - 20);
+        }
 
         ctx.restore();
     }

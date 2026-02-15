@@ -175,7 +175,7 @@ export class GameStateManager {
                         this.sound.playMenuSelect();
                     }
                 }
-                if (input.isJustPressed('KeyS')) {
+                if (input.isJustPressed('KeyS') || (this.game.touch && this.game.touch.justShop)) {
                     this.sound.init();
                     this.sound.playMenuConfirm();
                     this.setState(STATES.SHOP);
@@ -259,13 +259,26 @@ export class GameStateManager {
     }
 
     _updateShop(input) {
-        const items = this.shopTab === 0 ? BODY_SKINS : BULLET_SKINS;
+        const touch = this.game.touch;
+        let items = this.shopTab === 0 ? BODY_SKINS : BULLET_SKINS;
 
         if (input.isJustPressed('KeyQ')) {
             if (this.shopTab !== 0) { this.shopTab = 0; this.shopCursor = 0; this.sound.playMenuSelect(); }
         }
         if (input.isJustPressed('KeyE')) {
             if (this.shopTab !== 1) { this.shopTab = 1; this.shopCursor = 0; this.sound.playMenuSelect(); }
+        }
+
+        // 모바일: 탭 터치
+        if (touch && touch.touchedShopTab >= 0) {
+            const newTab = touch.touchedShopTab;
+            touch.touchedShopTab = -1;
+            if (this.shopTab !== newTab) {
+                this.shopTab = newTab;
+                this.shopCursor = 0;
+                this.sound.playMenuSelect();
+                items = this.shopTab === 0 ? BODY_SKINS : BULLET_SKINS;
+            }
         }
 
         if (input.isJustPressed('ArrowUp') || input.isJustPressed('KeyW')) {
@@ -279,7 +292,27 @@ export class GameStateManager {
             if (prev !== this.shopCursor) this.sound.playMenuSelect();
         }
 
-        if (input.isJustPressed('KeyZ')) {
+        // 모바일: 아이템 터치 선택
+        if (touch && touch.touchedShopItem >= 0) {
+            const scrollOffset = Math.max(0, this.shopCursor - 7);
+            const itemIndex = scrollOffset + touch.touchedShopItem;
+            touch.touchedShopItem = -1;
+            if (itemIndex >= 0 && itemIndex < items.length) {
+                if (this.shopCursor !== itemIndex) {
+                    this.shopCursor = itemIndex;
+                    this.sound.playMenuSelect();
+                }
+            }
+        }
+
+        // 구매/장착 (키보드 Z 또는 모바일 구매 버튼)
+        let buyAction = input.isJustPressed('KeyZ');
+        if (touch && touch.touchedShopBuy) {
+            touch.touchedShopBuy = false;
+            buyAction = true;
+        }
+
+        if (buyAction) {
             const item = items[this.shopCursor];
             if (this.shopTab === 0) {
                 if (this.save.ownsBodySkin(item.id)) {
@@ -298,7 +331,14 @@ export class GameStateManager {
             }
         }
 
-        if (input.pause) {
+        // 뒤로가기 (ESC 또는 모바일 뒤로 버튼)
+        let backAction = input.pause;
+        if (touch && touch.touchedShopBack) {
+            touch.touchedShopBack = false;
+            backAction = true;
+        }
+
+        if (backAction) {
             this.setState(STATES.MENU);
         }
     }
