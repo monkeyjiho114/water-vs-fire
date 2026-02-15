@@ -677,7 +677,7 @@ export class UIRenderer {
         ctx.fillText('집이 불타버렸어...', BASE_WIDTH / 2, BASE_HEIGHT / 2 + 10);
 
         if (time > 1 && Math.floor(time * 2) % 2 === 0) {
-            ctx.fillText('아무 키나 눌러서 다시 도전!', BASE_WIDTH / 2, BASE_HEIGHT / 2 + 60);
+            ctx.fillText(this.isMobile ? '터치해서 메인으로!' : '아무 키나 눌러서 메인으로!', BASE_WIDTH / 2, BASE_HEIGHT / 2 + 60);
         }
 
         ctx.restore();

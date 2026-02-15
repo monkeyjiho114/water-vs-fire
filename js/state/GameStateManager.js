@@ -249,7 +249,7 @@ export class GameStateManager {
 
             case STATES.GAME_OVER:
                 if (input.confirm && this.transitionTimer > 1) {
-                    this.setState(STATES.PLAYING);
+                    this.setState(STATES.MENU);
                 }
                 break;
 
