@@ -206,6 +206,15 @@ export class GameStateManager {
                 if (input.pause) {
                     this.setState(STATES.PLAYING);
                 }
+                // 나가기 버튼 (키보드 Q 또는 터치)
+                if (input.isJustPressed('KeyQ') || (this.game.touch && this.game.touch.touchedQuit)) {
+                    if (this.game.touch) this.game.touch.touchedQuit = false;
+                    this.setState(STATES.CONFIRM_QUIT);
+                }
+                break;
+
+            case STATES.CONFIRM_QUIT:
+                this._updateConfirmQuit(input);
                 break;
 
             case STATES.STAGE_CLEAR:
@@ -343,6 +352,30 @@ export class GameStateManager {
         }
     }
 
+    _updateConfirmQuit(input) {
+        const touch = this.game.touch;
+
+        // 예 (메인으로 돌아가기): 키보드 Z/Enter 또는 터치
+        let yesAction = input.isJustPressed('KeyZ') || input.isJustPressed('Enter');
+        if (touch && touch.touchedQuitYes) {
+            touch.touchedQuitYes = false;
+            yesAction = true;
+        }
+
+        // 아니오 (계속 플레이): ESC/X 또는 터치
+        let noAction = input.isJustPressed('Escape') || input.isJustPressed('KeyX');
+        if (touch && touch.touchedQuitNo) {
+            touch.touchedQuitNo = false;
+            noAction = true;
+        }
+
+        if (yesAction) {
+            this.setState(STATES.MENU);
+        } else if (noAction) {
+            this.setState(STATES.PLAYING);
+        }
+    }
+
     _updatePlaying(dt) {
         const player = this.player;
         const stage = this.stage;
@@ -430,6 +463,10 @@ export class GameStateManager {
                 this.ui.drawWin(ctx, this.score, this.transitionTimer, coinReward);
                 break;
             }
+            case STATES.CONFIRM_QUIT:
+                this._drawPlaying(ctx, skins);
+                this.ui.drawConfirmQuit(ctx);
+                break;
             case STATES.SHOP:
                 this.ui.drawShop(ctx, this.transitionTimer, this.shopTab, this.shopCursor, this.save, this.sprite);
                 break;

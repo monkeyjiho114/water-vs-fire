@@ -133,4 +133,5 @@ export const STATES = {
     WIN: 'WIN',
     PAUSED: 'PAUSED',
     SHOP: 'SHOP',
+    CONFIRM_QUIT: 'CONFIRM_QUIT',
 };

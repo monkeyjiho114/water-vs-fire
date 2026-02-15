@@ -578,9 +578,86 @@ export class UIRenderer {
         ctx.textAlign = 'center';
         ctx.fillStyle = '#FFF';
         ctx.font = 'bold 36px sans-serif';
-        ctx.fillText('일시정지', BASE_WIDTH / 2, BASE_HEIGHT / 2 - 10);
+        ctx.fillText('일시정지', BASE_WIDTH / 2, BASE_HEIGHT / 2 - 40);
         ctx.font = '18px sans-serif';
-        ctx.fillText(this.isMobile ? '|| 버튼을 눌러서 계속' : 'ESC를 눌러서 계속', BASE_WIDTH / 2, BASE_HEIGHT / 2 + 30);
+        ctx.fillText(this.isMobile ? '|| 버튼을 눌러서 계속' : 'ESC를 눌러서 계속', BASE_WIDTH / 2, BASE_HEIGHT / 2);
+
+        // 나가기 버튼
+        const quitBtnW = 120;
+        const quitBtnH = 40;
+        const quitBtnX = BASE_WIDTH / 2 - quitBtnW / 2;
+        const quitBtnY = BASE_HEIGHT / 2 + 30;
+        ctx.fillStyle = 'rgba(255,80,80,0.25)';
+        this._roundRect(ctx, quitBtnX, quitBtnY, quitBtnW, quitBtnH, 10);
+        ctx.fill();
+        ctx.strokeStyle = '#EF5350';
+        ctx.lineWidth = 2;
+        this._roundRect(ctx, quitBtnX, quitBtnY, quitBtnW, quitBtnH, 10);
+        ctx.stroke();
+        ctx.fillStyle = '#EF5350';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillText(this.isMobile ? '나가기' : 'Q: 나가기', BASE_WIDTH / 2, quitBtnY + 26);
+
+        ctx.restore();
+    }
+
+    // === 나가기 확인 ===
+    drawConfirmQuit(ctx) {
+        this._drawOverlay(ctx, 0.7);
+        ctx.save();
+        ctx.textAlign = 'center';
+
+        // 대화상자 배경
+        const boxW = 340;
+        const boxH = 180;
+        const boxX = BASE_WIDTH / 2 - boxW / 2;
+        const boxY = BASE_HEIGHT / 2 - boxH / 2;
+        ctx.fillStyle = 'rgba(30,30,60,0.95)';
+        this._roundRect(ctx, boxX, boxY, boxW, boxH, 16);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.lineWidth = 2;
+        this._roundRect(ctx, boxX, boxY, boxW, boxH, 16);
+        ctx.stroke();
+
+        // 질문
+        ctx.fillStyle = '#FFF';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillText('정말 나가시겠습니까?', BASE_WIDTH / 2, boxY + 50);
+
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.font = '14px sans-serif';
+        ctx.fillText('진행 상황이 사라집니다', BASE_WIDTH / 2, boxY + 78);
+
+        // 예 버튼
+        const btnW = 110;
+        const btnH = 42;
+        const btnY = boxY + boxH - 60;
+        const yesBtnX = BASE_WIDTH / 2 - btnW - 10;
+        ctx.fillStyle = 'rgba(255,80,80,0.3)';
+        this._roundRect(ctx, yesBtnX, btnY, btnW, btnH, 10);
+        ctx.fill();
+        ctx.strokeStyle = '#EF5350';
+        ctx.lineWidth = 2;
+        this._roundRect(ctx, yesBtnX, btnY, btnW, btnH, 10);
+        ctx.stroke();
+        ctx.fillStyle = '#EF5350';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillText(this.isMobile ? '예' : '예 (Z)', yesBtnX + btnW / 2, btnY + 27);
+
+        // 아니오 버튼
+        const noBtnX = BASE_WIDTH / 2 + 10;
+        ctx.fillStyle = 'rgba(100,200,100,0.3)';
+        this._roundRect(ctx, noBtnX, btnY, btnW, btnH, 10);
+        ctx.fill();
+        ctx.strokeStyle = '#66BB6A';
+        ctx.lineWidth = 2;
+        this._roundRect(ctx, noBtnX, btnY, btnW, btnH, 10);
+        ctx.stroke();
+        ctx.fillStyle = '#66BB6A';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillText(this.isMobile ? '아니오' : '아니오 (ESC)', noBtnX + btnW / 2, btnY + 27);
+
         ctx.restore();
     }
 

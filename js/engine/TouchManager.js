@@ -31,6 +31,11 @@ export class TouchManager {
         this.touchedShopBack = false;
         this.touchedShopBuy = false;
 
+        // 나가기 확인 전용
+        this.touchedQuit = false;
+        this.touchedQuitYes = false;
+        this.touchedQuitNo = false;
+
         // justPressed 추적
         this._prevJump = false;
         this._prevFreeze = false;
@@ -114,6 +119,23 @@ export class TouchManager {
                 // 상점 버튼 터치 감지 (메뉴 하단 영역)
                 if (this.buttons.shop && this._hitTest(pos, this.buttons.shop)) {
                     this.touchShop = true;
+                }
+            }
+
+            if (this.currentState === 'paused') {
+                // 나가기 버튼 터치 감지
+                if (this.buttons.quit && this._hitTest(pos, this.buttons.quit)) {
+                    this.touchedQuit = true;
+                }
+            }
+
+            if (this.currentState === 'confirmQuit') {
+                // 예/아니오 버튼 터치 감지
+                if (this.buttons.quitYes && this._hitTest(pos, this.buttons.quitYes)) {
+                    this.touchedQuitYes = true;
+                }
+                if (this.buttons.quitNo && this._hitTest(pos, this.buttons.quitNo)) {
+                    this.touchedQuitNo = true;
                 }
             }
 
@@ -224,6 +246,14 @@ export class TouchManager {
                 }
             } else if (this.currentState === 'shop') {
                 // 상점: 터치 무시 (touchStart에서 처리)
+            } else if (this.currentState === 'paused') {
+                // 일시정지: 나가기 버튼만 처리 (touchStart에서 처리)
+                // pause 버튼으로 재개
+                if (this.buttons.pause && this._hitTest(pos, this.buttons.pause)) {
+                    this.touchPause = true;
+                }
+            } else if (this.currentState === 'confirmQuit') {
+                // 나가기 확인: touchStart에서 처리
             } else {
                 // 기타 전환 화면: 아무 곳 터치 = confirm
                 this.touchConfirm = true;
@@ -265,6 +295,42 @@ export class TouchManager {
                 y: 455,
                 w: btnW, h: btnH,
                 label: '상점', color: '#FFD54F'
+            };
+            return;
+        }
+
+        if (state === 'paused') {
+            // 일시정지: 나가기 버튼 + 일시정지 버튼 (재개용)
+            const quitW = 120;
+            const quitH = 40;
+            this.buttons.quit = {
+                x: BASE_WIDTH / 2 - quitW / 2,
+                y: BASE_HEIGHT / 2 + 30,
+                w: quitW, h: quitH,
+            };
+            this.buttons.pause = {
+                x: BASE_WIDTH - 48, y: 4,
+                w: 44, h: 32,
+                label: '| |', color: 'rgba(255,255,255,0.4)'
+            };
+            return;
+        }
+
+        if (state === 'confirmQuit') {
+            // 나가기 확인: 예/아니오 버튼
+            const btnW = 110;
+            const btnH = 42;
+            const boxY = BASE_HEIGHT / 2 - 90;
+            const btnY = boxY + 180 - 60;
+            this.buttons.quitYes = {
+                x: BASE_WIDTH / 2 - btnW - 10,
+                y: btnY,
+                w: btnW, h: btnH,
+            };
+            this.buttons.quitNo = {
+                x: BASE_WIDTH / 2 + 10,
+                y: btnY,
+                w: btnW, h: btnH,
             };
             return;
         }
