@@ -27,6 +27,9 @@ export class FireMonster extends Entity {
         this.frozen = false;
         this.frozenTimer = 0;
 
+        // 공격 애니메이션
+        this.attackAnim = 0; // 0이면 비활성, >0이면 애니메이션 진행중
+
         // flying 전용: 높이 흔들림
         if (this.isFlying) {
             this.flyBaseY = y;
@@ -68,6 +71,7 @@ export class FireMonster extends Entity {
             case 'attacking':
                 this.vx = 0;
                 this.attackCooldown -= dt;
+                if (this.attackAnim > 0) this.attackAnim -= dt;
                 break;
 
             case 'stunned':
@@ -102,10 +106,11 @@ export class FireMonster extends Entity {
         if (this.state !== 'attacking') return false;
         if (this.attackCooldown > 0) return false;
         this.attackCooldown = this.attackRate;
+        this.attackAnim = 0.4; // 공격 애니메이션 0.4초
         return true;
     }
 
     draw(ctx, sprite) {
-        sprite.drawFireMonster(ctx, this.x, this.y, this.width, this.height, this.type, this.time, this.hitFlash > 0, this.frozen, this.isFlying);
+        sprite.drawFireMonster(ctx, this.x, this.y, this.width, this.height, this.type, this.time, this.hitFlash > 0, this.frozen, this.isFlying, this.attackAnim);
     }
 }

@@ -261,9 +261,20 @@ export class SpriteDrawer {
     }
 
     // === 불 몬스터 ===
-    drawFireMonster(ctx, x, y, w, h, type, time, flashing, frozen, isFlying) {
+    drawFireMonster(ctx, x, y, w, h, type, time, flashing, frozen, isFlying, attackAnim) {
         ctx.save();
         if (flashing) ctx.globalAlpha = 0.5;
+
+        // 공격 애니메이션: 몸을 왼쪽(집 방향)으로 기울이며 돌진
+        const atkProgress = attackAnim > 0 ? Math.min(1, (0.4 - attackAnim) / 0.15) : 0;
+        const atkRecoil = attackAnim > 0 && attackAnim < 0.25 ? (0.25 - attackAnim) / 0.25 : 0;
+        const atkLunge = atkProgress * (1 - atkRecoil);
+        if (attackAnim > 0) {
+            ctx.translate(x + w / 2, y + h);
+            ctx.rotate(-atkLunge * 0.3); // 앞으로 기울기
+            ctx.translate(-(x + w / 2), -(y + h));
+            x -= atkLunge * 12; // 앞으로 돌진
+        }
 
         const flicker1 = frozen ? 0 : Math.sin(time * 10) * 3;
         const flicker2 = frozen ? 0 : Math.cos(time * 12) * 2;
@@ -388,13 +399,43 @@ export class SpriteDrawer {
             }
         }
 
+        // 공격 불꽃 이펙트
+        if (attackAnim > 0 && !frozen) {
+            const atkAlpha = attackAnim > 0.2 ? 1 : attackAnim / 0.2;
+            ctx.globalAlpha = atkAlpha * 0.9;
+            // 입에서 나오는 화염
+            const fx = x - 5;
+            const fy = y + h * 0.55;
+            const flameSize = w * 0.5 * atkLunge;
+            const flameGrad = ctx.createRadialGradient(fx, fy, 2, fx - flameSize, fy, flameSize + 5);
+            flameGrad.addColorStop(0, COLORS.fireYellow);
+            flameGrad.addColorStop(0.4, COLORS.fireOrange);
+            flameGrad.addColorStop(1, 'rgba(255,0,0,0)');
+            ctx.fillStyle = flameGrad;
+            ctx.beginPath();
+            ctx.ellipse(fx - flameSize * 0.5, fy, flameSize, flameSize * 0.6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+
         ctx.restore();
     }
 
     // === 보스 몬스터 ===
-    drawBossMonster(ctx, x, y, w, h, phase, time, flashing, frozen) {
+    drawBossMonster(ctx, x, y, w, h, phase, time, flashing, frozen, attackAnim) {
         ctx.save();
         if (flashing) ctx.globalAlpha = 0.5;
+
+        // 공격 애니메이션: 몸을 왼쪽으로 기울이며 돌진
+        const bossAtkProgress = attackAnim > 0 ? Math.min(1, (0.5 - attackAnim) / 0.2) : 0;
+        const bossAtkRecoil = attackAnim > 0 && attackAnim < 0.3 ? (0.3 - attackAnim) / 0.3 : 0;
+        const bossAtkLunge = bossAtkProgress * (1 - bossAtkRecoil);
+        if (attackAnim > 0) {
+            ctx.translate(x + w / 2, y + h);
+            ctx.rotate(-bossAtkLunge * 0.2);
+            ctx.translate(-(x + w / 2), -(y + h));
+            x -= bossAtkLunge * 18;
+        }
 
         const flicker = frozen ? 0 : Math.sin(time * 8) * 5;
 
@@ -519,6 +560,24 @@ export class SpriteDrawer {
                 ctx.lineTo(cx + Math.cos(a) * w * 0.4, cy + Math.sin(a) * h * 0.4);
                 ctx.stroke();
             }
+        }
+
+        // 보스 공격 화염 이펙트
+        if (attackAnim > 0 && !frozen) {
+            const bossAtkAlpha = attackAnim > 0.25 ? 1 : attackAnim / 0.25;
+            ctx.globalAlpha = bossAtkAlpha * 0.9;
+            const bfx = x - 10;
+            const bfy = y + h * 0.5;
+            const bFlameSize = w * 0.6 * bossAtkLunge;
+            const bFlameGrad = ctx.createRadialGradient(bfx, bfy, 3, bfx - bFlameSize, bfy, bFlameSize + 8);
+            bFlameGrad.addColorStop(0, COLORS.fireYellow);
+            bFlameGrad.addColorStop(0.3, COLORS.fireOrange);
+            bFlameGrad.addColorStop(1, 'rgba(183,28,28,0)');
+            ctx.fillStyle = bFlameGrad;
+            ctx.beginPath();
+            ctx.ellipse(bfx - bFlameSize * 0.5, bfy, bFlameSize, bFlameSize * 0.7, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
         }
 
         ctx.restore();

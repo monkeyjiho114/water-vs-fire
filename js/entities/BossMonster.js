@@ -25,6 +25,9 @@ export class BossMonster extends Entity {
 
         this.frozen = false;
         this.frozenTimer = 0;
+
+        // 공격 애니메이션
+        this.attackAnim = 0;
     }
 
     setTarget(houseX) {
@@ -39,6 +42,7 @@ export class BossMonster extends Entity {
     update(dt) {
         this.time += dt;
         if (this.hitFlash > 0) this.hitFlash -= dt;
+        if (this.attackAnim > 0) this.attackAnim -= dt;
 
         // 화염구는 얼려도 계속 날아감
         for (const fb of this.fireballs) {
@@ -135,13 +139,14 @@ export class BossMonster extends Entity {
     canAttack() {
         if (this.frozen) return false;
         if (this.x <= this.targetX + 80) {
+            this.attackAnim = 0.5; // 보스 공격 애니메이션 0.5초
             return true;
         }
         return false;
     }
 
     draw(ctx, sprite) {
-        sprite.drawBossMonster(ctx, this.x, this.y, this.width, this.height, this.phase, this.time, this.hitFlash > 0, this.frozen);
+        sprite.drawBossMonster(ctx, this.x, this.y, this.width, this.height, this.phase, this.time, this.hitFlash > 0, this.frozen, this.attackAnim);
 
         for (const fb of this.fireballs) {
             sprite.drawFireball(ctx, fb.x, fb.y, fb.width);
