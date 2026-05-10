@@ -477,6 +477,14 @@ export class GameStateManager {
         const freezeEnabled = DIFFICULTIES[this.difficulty].freezeEnabled;
 
         player.update(dt, this.game.input, this.cannonComplete, freezeEnabled, this.sound);
+
+        // 차지 샷 발사 시 화면 흔들림
+        if (player.chargeReleaseRequest) {
+            player.chargeReleaseRequest = false;
+            const ratio = player.chargeReleaseRatio;
+            this.shake(ratio >= 1 ? 5 : 2.5, 0.15);
+        }
+
         stage.update(dt, player);
         this.collision.check(player, stage, this.sound, dt, this);
 
@@ -573,9 +581,24 @@ export class GameStateManager {
         this.bg.draw(ctx, bgTheme);
         if (this.stage) this.stage.draw(ctx, this.sprite);
         if (this.player) this.player.draw(ctx, this.sprite, this.cannonComplete, skins);
+
+        // Final Stand 모드 (집 HP < 30%)
+        if (this.stage && this.stage.house) {
+            const hr = this.stage.house.hpRatio;
+            if (hr > 0 && hr <= 0.3) {
+                this.ui.drawFinalStandOverlay(ctx, this.transitionTimer);
+            }
+        }
+
         if (this.stage && this.player) {
             this.ui.drawHUD(ctx, this.player, this.stage, this.materialsCollected, this.cannonComplete, this.currentStageIndex, this.difficulty, this.score, this.combo, this.comboTimer / this.comboMaxTimer);
         }
+
+        // 웨이브 경고
+        if (this.stage && this.stage.nextWaveWarning) {
+            this.ui.drawWaveWarning(ctx, this.stage.nextWaveWarning);
+        }
+
         // 스테이지 시작 배너
         if (this.stageBannerTimer > 0 && this.stage) {
             this.ui.drawStageBanner(ctx, this.currentStageIndex, this.stage.stageData.name, this.stageBannerTimer, this.difficulty);

@@ -1,9 +1,10 @@
 import { STAGES } from '../data/stages.js';
-import { BASE_WIDTH, BASE_HEIGHT, MONSTER_TYPES, DIFFICULTIES, POWERUP_DROP_CHANCE, POWERUP_MAX_PER_GAME } from '../data/constants.js';
+import { BASE_WIDTH, BASE_HEIGHT, MONSTER_TYPES, DIFFICULTIES, POWERUP_DROP_CHANCE, POWERUP_MAX_PER_GAME, HEAL_DROP_CHANCE } from '../data/constants.js';
 import { FireMonster } from '../entities/FireMonster.js';
 import { BossMonster } from '../entities/BossMonster.js';
 import { EnemyCastle } from '../entities/EnemyCastle.js';
 import { PowerUp } from '../entities/PowerUp.js';
+import { HealItem } from '../entities/HealItem.js';
 import { House } from '../entities/House.js';
 import { FloatingText } from '../entities/FloatingText.js';
 import { createFireBurst, createSparkle } from '../entities/Particle.js';
@@ -28,8 +29,12 @@ export class StageManager {
         this.particles = [];
         this.powerUps = [];
         this.powerUpsDropped = 0;
+        this.healItems = []; // 회복 아이템
         this.floatingTexts = []; // 떠오르는 데미지 숫자, 콤보 등
         this.bgParticles = []; // 배경 분위기 파티클 (조명, 잎, 재 등)
+
+        // 웨이브 경고 (다음 웨이브 5초 전부터 표시)
+        this.nextWaveWarning = null; // { delay, remaining }
 
         // 악당 성 (보스 스테이지 제외)
         this.enemyCastle = null;
@@ -133,6 +138,15 @@ export class StageManager {
         }
         this.powerUps = this.powerUps.filter(pu => pu.active);
 
+        // 회복 아이템 업데이트
+        for (const hi of this.healItems) {
+            hi.update(dt);
+        }
+        this.healItems = this.healItems.filter(hi => hi.active);
+
+        // 웨이브 경고 (다음 웨이브 3초 전부터)
+        this._updateWaveWarning();
+
         // 파티클 업데이트
         for (const p of this.particles) {
             p.update(dt);
@@ -203,6 +217,40 @@ export class StageManager {
         this.powerUps.push(pu);
     }
 
+    tryDropHeal(x, y) {
+        if (Math.random() > HEAL_DROP_CHANCE) return;
+        const hi = new HealItem(x, y - 20);
+        this.healItems.push(hi);
+    }
+
+    _updateWaveWarning() {
+        // 다음 미스폰 웨이브 찾기
+        let nextWave = null;
+        let nextDelay = Infinity;
+        for (let i = 0; i < this.waves.length; i++) {
+            if (this.wavesSpawned[i]) continue;
+            if (this.waves[i].delay < nextDelay) {
+                nextDelay = this.waves[i].delay;
+                nextWave = this.waves[i];
+            }
+        }
+        // 보스 스폰 경고
+        if (this.isBossStage() && !this.bossSpawned && this.bossDelay < nextDelay) {
+            nextDelay = this.bossDelay;
+            nextWave = { isBoss: true };
+        }
+        if (nextWave) {
+            const remaining = nextDelay - this.waveTimer;
+            if (remaining > 0 && remaining <= 3.5) {
+                this.nextWaveWarning = { wave: nextWave, remaining };
+            } else {
+                this.nextWaveWarning = null;
+            }
+        } else {
+            this.nextWaveWarning = null;
+        }
+    }
+
     onEnemyKilled(enemy) {
         // 적 종류에 따라 파티클 양 조정
         const partCount = enemy.type === 'tank' ? 18 : enemy.type === 'fast' ? 8 : 12;
@@ -247,16 +295,25 @@ export class StageManager {
         }
     }
 
-    showDamageNumber(x, y, amount, isPower = false) {
-        const text = String(Math.ceil(amount));
+    showDamageNumber(x, y, amount, isPower = false, isCrit = false) {
+        const text = isCrit ? `${Math.ceil(amount)}!` : String(Math.ceil(amount));
+        const baseSize = isPower ? 22 : 16;
+        const critSize = isCrit ? baseSize + 6 : baseSize;
         this.addFloatingText(x, y - 10, text, {
-            color: isPower ? '#FFD54F' : '#FFF',
-            outlineColor: isPower ? '#E65100' : '#0D47A1',
-            size: isPower ? 22 : 16,
+            color: isCrit ? '#FFD700' : (isPower ? '#FFD54F' : '#FFF'),
+            outlineColor: isCrit ? '#FF1744' : (isPower ? '#E65100' : '#0D47A1'),
+            size: critSize,
             vy: -100,
             gravity: 320,
-            lifetime: 0.7,
+            lifetime: isCrit ? 1.0 : 0.7,
+            shake: isCrit ? 1.5 : 0,
         });
+        if (isCrit) {
+            // 크리티컬 시 작은 별 텍스트도 추가
+            this.addFloatingText(x + 14, y - 18, '★ CRIT', {
+                color: '#FFD700', outlineColor: '#000', size: 11, vy: -60, lifetime: 0.6,
+            });
+        }
     }
 
     showComboText(x, y, combo) {
@@ -299,6 +356,11 @@ export class StageManager {
         // 파워업
         for (const pu of this.powerUps) {
             pu.draw(ctx, sprite);
+        }
+
+        // 회복 아이템
+        for (const hi of this.healItems) {
+            hi.draw(ctx, sprite);
         }
 
         // 파티클

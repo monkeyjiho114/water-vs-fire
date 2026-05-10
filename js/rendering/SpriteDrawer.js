@@ -225,6 +225,99 @@ export class SpriteDrawer {
         ctx.restore();
     }
 
+    // 차지 오라 (플레이어 주변)
+    drawChargeAura(ctx, cx, cy, w, ratio, time) {
+        ctx.save();
+        const isFull = ratio >= 1;
+        const baseR = w * 0.5 + ratio * 14;
+        const pulse = Math.sin(time * (isFull ? 18 : 10)) * 3;
+        const r = baseR + pulse;
+
+        // 외곽 글로우
+        const glowGrad = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r * 1.5);
+        if (isFull) {
+            glowGrad.addColorStop(0, 'rgba(255,215,0,0.5)');
+            glowGrad.addColorStop(0.5, 'rgba(255,140,0,0.3)');
+            glowGrad.addColorStop(1, 'rgba(255,140,0,0)');
+        } else {
+            glowGrad.addColorStop(0, `rgba(79,195,247,${0.4 * ratio})`);
+            glowGrad.addColorStop(0.6, `rgba(2,119,189,${0.3 * ratio})`);
+            glowGrad.addColorStop(1, 'rgba(2,119,189,0)');
+        }
+        ctx.fillStyle = glowGrad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 회전 입자
+        ctx.fillStyle = isFull ? '#FFD700' : '#4FC3F7';
+        const numOrbs = 6;
+        for (let i = 0; i < numOrbs; i++) {
+            const a = time * (isFull ? 5 : 3) + (Math.PI * 2 * i) / numOrbs;
+            const ox = cx + Math.cos(a) * r;
+            const oy = cy + Math.sin(a) * r;
+            ctx.beginPath();
+            ctx.arc(ox, oy, 2.5 + ratio * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 풀차지 표시
+        if (isFull) {
+            ctx.strokeStyle = 'rgba(255,215,0,0.8)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r + 2, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    // 회복 아이템 (하트)
+    drawHealItem(ctx, x, y, size, time) {
+        ctx.save();
+        const cx = x + size / 2;
+        const cy = y + size / 2;
+        const glow = Math.sin(time * 5) * 0.3 + 0.7;
+        const pulse = 1 + Math.sin(time * 4) * 0.08;
+
+        // 글로우
+        ctx.shadowColor = '#66BB6A';
+        ctx.shadowBlur = 12 * glow;
+
+        // 외곽 원 (배경)
+        ctx.fillStyle = `rgba(102,187,106,${0.3 * glow})`;
+        ctx.beginPath();
+        ctx.arc(cx, cy, size * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+
+        // 하트
+        const hs = size * 0.55 * pulse;
+        ctx.translate(cx, cy);
+        ctx.scale(pulse, pulse);
+        ctx.fillStyle = '#EF5350';
+        ctx.strokeStyle = '#B71C1C';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        const hr = size * 0.18;
+        ctx.moveTo(0, hr * 0.5);
+        ctx.bezierCurveTo(0, -hr, -hr * 1.6, -hr, -hr * 1.6, hr * 0.4);
+        ctx.bezierCurveTo(-hr * 1.6, hr * 1.4, 0, hr * 1.8, 0, hr * 2);
+        ctx.bezierCurveTo(0, hr * 1.8, hr * 1.6, hr * 1.4, hr * 1.6, hr * 0.4);
+        ctx.bezierCurveTo(hr * 1.6, -hr, 0, -hr, 0, hr * 0.5);
+        ctx.fill();
+        ctx.stroke();
+
+        // 하이라이트
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.beginPath();
+        ctx.ellipse(-hr * 0.6, -hr * 0.1, hr * 0.3, hr * 0.4, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
     // 발사 시 머즈 플래시 효과
     drawMuzzleFlash(ctx, x, y, facingRight, isCannon, isPower, time) {
         ctx.save();
@@ -287,7 +380,38 @@ export class SpriteDrawer {
             ctx.globalAlpha = 1;
         }
 
-        if (bullet.isPowerShot) {
+        if (bullet.isCharge) {
+            // 차지 샷 — 큰 글로우 + 회전 링
+            const ratio = bullet.chargeRatio || 1;
+            ctx.shadowColor = ratio >= 1 ? '#FFD700' : '#4FC3F7';
+            ctx.shadowBlur = 18;
+            const grad = ctx.createRadialGradient(bullet.cx, bullet.cy, 1, bullet.cx, bullet.cy, bullet.width / 2);
+            if (ratio >= 1) {
+                grad.addColorStop(0, '#FFF');
+                grad.addColorStop(0.4, '#FFD700');
+                grad.addColorStop(1, '#FF8F00');
+            } else {
+                grad.addColorStop(0, '#FFF');
+                grad.addColorStop(0.5, '#4FC3F7');
+                grad.addColorStop(1, '#0277BD');
+            }
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.ellipse(bullet.cx, bullet.cy, bullet.width / 2, bullet.height / 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // 추가 회전 입자
+            ctx.shadowBlur = 0;
+            const t = Date.now() / 100;
+            for (let i = 0; i < 3; i++) {
+                const a = t + (Math.PI * 2 * i) / 3;
+                const ox = bullet.cx + Math.cos(a) * bullet.width * 0.7;
+                const oy = bullet.cy + Math.sin(a) * bullet.height * 0.7;
+                ctx.fillStyle = ratio >= 1 ? 'rgba(255,215,0,0.7)' : 'rgba(79,195,247,0.7)';
+                ctx.beginPath();
+                ctx.arc(ox, oy, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else if (bullet.isPowerShot) {
             // 강화 총알 — 글로우 + 화염 트레일
             ctx.shadowColor = '#FFD54F';
             ctx.shadowBlur = 12;
@@ -465,6 +589,58 @@ export class SpriteDrawer {
         if (type === 'tank') {
             ctx.strokeStyle = frozen ? '#006064' : '#B71C1C';
             ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // 슈터: 핑크 마법 모자
+        if (type === 'shooter' && !frozen) {
+            ctx.fillStyle = '#C2185B';
+            ctx.beginPath();
+            ctx.moveTo(x + w * 0.2, y + h * 0.1);
+            ctx.lineTo(x + w * 0.5, y - h * 0.2);
+            ctx.lineTo(x + w * 0.8, y + h * 0.1);
+            ctx.closePath();
+            ctx.fill();
+            // 모자 끝 별
+            ctx.fillStyle = '#FFEB3B';
+            ctx.beginPath();
+            ctx.arc(x + w * 0.5, y - h * 0.18, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 폭발형: 짧은 도화선
+        if (type === 'exploder' && !frozen) {
+            const fuseFlick = Math.sin(time * 20) * 2;
+            ctx.strokeStyle = '#5D4037';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x + w * 0.5, y + h * 0.05);
+            ctx.lineTo(x + w * 0.55, y - 8);
+            ctx.stroke();
+            // 도화선 불꽃
+            ctx.fillStyle = '#FFEB3B';
+            ctx.beginPath();
+            ctx.arc(x + w * 0.55 + fuseFlick, y - 8, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#FF6B35';
+            ctx.beginPath();
+            ctx.arc(x + w * 0.55 + fuseFlick, y - 10, 2, 0, Math.PI * 2);
+            ctx.fill();
+            // 외곽선 진한 보라
+            ctx.strokeStyle = '#4A148C';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // 차저: 어두운 갑옷
+        if (type === 'charger' && !frozen) {
+            ctx.fillStyle = 'rgba(62,39,35,0.8)';
+            // 어깨 갑옷
+            ctx.fillRect(x + w * 0.05, y + h * 0.35, w * 0.15, h * 0.25);
+            ctx.fillRect(x + w * 0.8, y + h * 0.35, w * 0.15, h * 0.25);
+            // 외곽선
+            ctx.strokeStyle = '#1A0000';
+            ctx.lineWidth = 2.5;
             ctx.stroke();
         }
 

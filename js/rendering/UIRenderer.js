@@ -338,49 +338,63 @@ export class UIRenderer {
 
         // 말풍선
         ctx.fillStyle = '#FFF';
-        this._roundRect(ctx, 100, 60, 600, 320, 20);
+        this._roundRect(ctx, 80, 40, 640, 380, 20);
         ctx.fill();
         ctx.strokeStyle = COLORS.waterDark;
         ctx.lineWidth = 3;
-        this._roundRect(ctx, 100, 60, 600, 320, 20);
+        this._roundRect(ctx, 80, 40, 640, 380, 20);
         ctx.stroke();
 
         ctx.fillStyle = '#333';
         ctx.font = 'bold 22px sans-serif';
-        ctx.fillText('불 몬스터가 마을을 공격하고 있어!', BASE_WIDTH / 2, 110);
+        ctx.fillText('불 몬스터가 마을을 공격하고 있어!', BASE_WIDTH / 2, 85);
 
-        ctx.font = '18px sans-serif';
-        ctx.fillText('각 마을의 물방울 집을 지키면서', BASE_WIDTH / 2, 155);
-        ctx.fillText('악당 성을 부수고 물대포 재료를 모아야 해!', BASE_WIDTH / 2, 185);
+        ctx.font = '17px sans-serif';
+        ctx.fillText('악당 성을 부수고 물대포 재료를 모아!', BASE_WIDTH / 2, 125);
 
         ctx.fillStyle = COLORS.fireRed;
         ctx.font = 'bold 18px sans-serif';
-        ctx.fillText('재료 4개를 모으면 물대포 완성!', BASE_WIDTH / 2, 225);
+        ctx.fillText('★ 재료 4개를 모으면 초강력 물대포 완성! ★', BASE_WIDTH / 2, 160);
+
+        // 적 종류 소개
+        ctx.fillStyle = '#0277BD';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillText('새 적: 슈터(원거리), 폭발형(자폭), 차저(돌진), 비행(어려움)', BASE_WIDTH / 2, 200);
 
         // 조작법
         ctx.fillStyle = '#333';
-        ctx.font = '16px sans-serif';
+        ctx.font = '15px sans-serif';
         if (this.isMobile) {
-            ctx.fillText('조이스틱  이동', BASE_WIDTH / 2, 270);
-            ctx.fillText('JUMP 버튼  점프', BASE_WIDTH / 2, 295);
-            ctx.fillText('FIRE 버튼  물총 발사', BASE_WIDTH / 2, 320);
+            ctx.fillText('조이스틱  이동 / JUMP  점프', BASE_WIDTH / 2, 240);
+            ctx.fillText('FIRE 짧게 — 일반 발사', BASE_WIDTH / 2, 265);
+            ctx.fillStyle = '#01579B';
+            ctx.font = 'bold 15px sans-serif';
+            ctx.fillText('FIRE 길게 — 차지 샷 (강력! 관통!)', BASE_WIDTH / 2, 290);
+            ctx.fillStyle = '#333';
+            ctx.font = '15px sans-serif';
         } else {
-            ctx.fillText('⬅ ➡  이동', BASE_WIDTH / 2, 270);
-            ctx.fillText('Space  점프', BASE_WIDTH / 2, 295);
-            ctx.fillText('Z  물총 발사', BASE_WIDTH / 2, 320);
+            ctx.fillText('⬅ ➡  이동 | Space  점프 | Z 짧게 — 일반 발사', BASE_WIDTH / 2, 240);
+            ctx.fillStyle = '#01579B';
+            ctx.font = 'bold 15px sans-serif';
+            ctx.fillText('Z 길게 누르기 — 차지 샷 (강력! 관통!)', BASE_WIDTH / 2, 270);
+            ctx.fillStyle = '#333';
+            ctx.font = '15px sans-serif';
         }
+        ctx.fillStyle = '#D32F2F';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('💥 18% 크리티컬 (1.5배) | ❤️ 회복 아이템 드롭 | ⚠ 집 HP 30%↓ = FINAL STAND!', BASE_WIDTH / 2, 318);
 
         // 어려움 전용 조작법
         if (difficulty === 'hard') {
             ctx.fillStyle = COLORS.waterDark;
-            ctx.font = 'bold 16px sans-serif';
-            ctx.fillText(this.isMobile ? 'ICE 버튼  얼리기 (쿨타임 15초)' : 'X  얼리기 (쿨타임 15초)', BASE_WIDTH / 2, 350);
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillText(this.isMobile ? '❄ ICE 버튼  얼리기 (쿨타임 15초)' : '❄ X  얼리기 (쿨타임 15초)', BASE_WIDTH / 2, 345);
         }
 
         if (time > 0.5 && Math.floor(time * 2) % 2 === 0) {
             ctx.fillStyle = COLORS.waterDark;
-            ctx.font = 'bold 20px sans-serif';
-            ctx.fillText(this.isMobile ? '터치해서 출발!' : '아무 키나 눌러서 출발!', BASE_WIDTH / 2, 440);
+            ctx.font = 'bold 22px sans-serif';
+            ctx.fillText(this.isMobile ? '▶ 터치해서 출발 ▶' : '▶ 아무 키나 눌러서 출발 ▶', BASE_WIDTH / 2, 460);
         }
 
         ctx.restore();
@@ -582,6 +596,79 @@ export class UIRenderer {
             ctx.fillText('강화!', puBarX, puBarY - 4);
         }
 
+        ctx.restore();
+    }
+
+    // === 웨이브 경고 ===
+    drawWaveWarning(ctx, warning) {
+        if (!warning) return;
+        const remaining = warning.remaining;
+        const isBoss = warning.wave && warning.wave.isBoss;
+        const blink = Math.sin(Date.now() / 100) * 0.5 + 0.5;
+
+        ctx.save();
+        ctx.textAlign = 'center';
+
+        // 화면 우측에서 화살표 표시
+        const arrowX = BASE_WIDTH - 60;
+        const arrowY = BASE_HEIGHT * 0.4;
+        const arrowAlpha = 0.5 + blink * 0.5;
+
+        // 위험 띠 (우측 가장자리)
+        ctx.fillStyle = isBoss ? `rgba(255,23,68,${0.15 + blink * 0.15})` : `rgba(255,107,53,${0.1 + blink * 0.1})`;
+        ctx.fillRect(BASE_WIDTH - 100, 0, 100, BASE_HEIGHT);
+
+        // 큰 경고 화살표
+        ctx.fillStyle = isBoss ? '#FF1744' : '#FFD54F';
+        ctx.shadowColor = '#000';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(arrowX + 30, arrowY);
+        ctx.lineTo(arrowX, arrowY - 20);
+        ctx.lineTo(arrowX, arrowY + 20);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // 텍스트
+        ctx.fillStyle = isBoss ? '#FF1744' : '#FFD54F';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.shadowColor = '#000';
+        ctx.shadowBlur = 4;
+        ctx.fillText(isBoss ? '⚠ BOSS ⚠' : 'WAVE!', BASE_WIDTH - 50, arrowY - 35);
+        ctx.font = 'bold 28px sans-serif';
+        ctx.fillStyle = '#FFF';
+        ctx.fillText(Math.ceil(remaining).toString(), BASE_WIDTH - 50, arrowY + 60);
+        ctx.shadowBlur = 0;
+
+        ctx.restore();
+    }
+
+    // === Final Stand 오버레이 ===
+    drawFinalStandOverlay(ctx, time) {
+        // 빨간 비네팅 펄스
+        const pulse = Math.sin(time * 4) * 0.15 + 0.35;
+        const grad = ctx.createRadialGradient(
+            BASE_WIDTH / 2, BASE_HEIGHT / 2, BASE_WIDTH * 0.2,
+            BASE_WIDTH / 2, BASE_HEIGHT / 2, BASE_WIDTH * 0.7
+        );
+        grad.addColorStop(0, 'rgba(255,0,0,0)');
+        grad.addColorStop(1, `rgba(255,0,0,${pulse})`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
+
+        // 상단 경고 텍스트
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#000';
+        ctx.shadowBlur = 6;
+        const blink = Math.sin(time * 6);
+        ctx.fillStyle = blink > 0 ? '#FF1744' : '#FFEB3B';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.fillText('⚠ FINAL STAND! ⚠', BASE_WIDTH / 2, 90);
+        ctx.fillStyle = '#FFF';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillText('데미지 +60% — 집을 지켜라!', BASE_WIDTH / 2, 110);
         ctx.restore();
     }
 

@@ -464,6 +464,14 @@ export class SoundManager {
         setTimeout(() => this._play(400, 'sine', 0.04, 0.08), 30);
     }
 
+    playChargeShot() {
+        // 파워풀한 차지 샷 발사음
+        this._play(150, 'sawtooth', 0.2, 0.18);
+        this._play(300, 'square', 0.15, 0.1);
+        setTimeout(() => this._play(80, 'sine', 0.25, 0.15), 40);
+        setTimeout(() => this._playNoise(0.1, 0.1), 0);
+    }
+
     playHit() {
         this._playNoise(0.1, 0.12);
         this._play(300, 'square', 0.05, 0.08);

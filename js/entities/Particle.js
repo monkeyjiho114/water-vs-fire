@@ -127,3 +127,63 @@ export function createSparkle(x, y, count = 6) {
     }
     return particles;
 }
+
+// 폭발 파티클 — 폭발형 적, 차지 샷 등에서 사용
+export function createExplosion(x, y, count = 24, radius = 60) {
+    const particles = [];
+    const colors = ['#FFEB3B', '#FF6B35', '#D32F2F', '#FFFFFF'];
+    for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
+        const speed = (radius * 2) + Math.random() * (radius * 2);
+        particles.push(new Particle(
+            x, y,
+            Math.cos(angle) * speed,
+            Math.sin(angle) * speed,
+            4 + Math.random() * 5,
+            colors[Math.floor(Math.random() * colors.length)],
+            0.5 + Math.random() * 0.4
+        ));
+    }
+    // 중앙 큰 섬광
+    particles.push(new Particle(
+        x, y, 0, 0, radius * 0.5, '#FFFFFF', 0.2
+    ));
+    return particles;
+}
+
+// 차지 링 (차지 중 플레이어 주변)
+export function createChargeRing(x, y, count = 8, chargeRatio = 1) {
+    const particles = [];
+    const r = 30 * chargeRatio;
+    for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count;
+        particles.push(new Particle(
+            x + Math.cos(angle) * r,
+            y + Math.sin(angle) * r,
+            -Math.cos(angle) * 80,
+            -Math.sin(angle) * 80 - 30,
+            2 + Math.random() * 2,
+            chargeRatio >= 1 ? '#FFD700' : '#4FC3F7',
+            0.3 + Math.random() * 0.2
+        ));
+    }
+    return particles;
+}
+
+// 회복 파티클 (초록 빛)
+export function createHealParticles(x, y, count = 10) {
+    const particles = [];
+    for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count;
+        const speed = 60 + Math.random() * 50;
+        particles.push(new Particle(
+            x, y,
+            Math.cos(angle) * speed * 0.3,
+            -50 - Math.random() * 50,
+            3 + Math.random() * 2,
+            '#66BB6A',
+            0.6 + Math.random() * 0.4
+        ));
+    }
+    return particles;
+}
