@@ -1,10 +1,11 @@
 import { STAGES } from '../data/stages.js';
-import { BASE_WIDTH, MONSTER_TYPES, DIFFICULTIES, POWERUP_DROP_CHANCE, POWERUP_MAX_PER_GAME } from '../data/constants.js';
+import { BASE_WIDTH, BASE_HEIGHT, MONSTER_TYPES, DIFFICULTIES, POWERUP_DROP_CHANCE, POWERUP_MAX_PER_GAME } from '../data/constants.js';
 import { FireMonster } from '../entities/FireMonster.js';
 import { BossMonster } from '../entities/BossMonster.js';
 import { EnemyCastle } from '../entities/EnemyCastle.js';
 import { PowerUp } from '../entities/PowerUp.js';
 import { House } from '../entities/House.js';
+import { FloatingText } from '../entities/FloatingText.js';
 import { createFireBurst, createSparkle } from '../entities/Particle.js';
 
 export class StageManager {
@@ -27,6 +28,8 @@ export class StageManager {
         this.particles = [];
         this.powerUps = [];
         this.powerUpsDropped = 0;
+        this.floatingTexts = []; // 떠오르는 데미지 숫자, 콤보 등
+        this.bgParticles = []; // 배경 분위기 파티클 (조명, 잎, 재 등)
 
         // 악당 성 (보스 스테이지 제외)
         this.enemyCastle = null;
@@ -136,6 +139,18 @@ export class StageManager {
         }
         this.particles = this.particles.filter(p => p.active);
 
+        // 플로팅 텍스트 업데이트
+        for (const ft of this.floatingTexts) {
+            ft.update(dt);
+        }
+        this.floatingTexts = this.floatingTexts.filter(ft => ft.active);
+
+        // 배경 파티클 업데이트
+        for (const bp of this.bgParticles) {
+            bp.update(dt);
+        }
+        this.bgParticles = this.bgParticles.filter(bp => bp.active);
+
         // 클리어 조건
         if (!this.cleared) {
             if (this.isBossStage()) {
@@ -189,18 +204,33 @@ export class StageManager {
     }
 
     onEnemyKilled(enemy) {
-        this.addParticles(createFireBurst(enemy.cx, enemy.cy));
+        // 적 종류에 따라 파티클 양 조정
+        const partCount = enemy.type === 'tank' ? 18 : enemy.type === 'fast' ? 8 : 12;
+        this.addParticles(createFireBurst(enemy.cx, enemy.cy, partCount));
+        // 작은 반짝임도 추가
+        this.addParticles(createSparkle(enemy.cx, enemy.cy, 4));
     }
 
     onBossKilled() {
         this.bossKilled = true;
-        this.addParticles(createFireBurst(this.boss.cx, this.boss.cy, 20));
-        this.addParticles(createSparkle(this.boss.cx, this.boss.cy, 15));
+        // 큰 폭발 — 여러 번
+        this.addParticles(createFireBurst(this.boss.cx, this.boss.cy, 30));
+        this.addParticles(createSparkle(this.boss.cx, this.boss.cy, 20));
+        // 추가 작은 폭발
+        for (let i = 0; i < 5; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const r = 30 + Math.random() * 40;
+            this.addParticles(createFireBurst(
+                this.boss.cx + Math.cos(angle) * r,
+                this.boss.cy + Math.sin(angle) * r,
+                10
+            ));
+        }
     }
 
     onCastleDestroyed() {
-        this.addParticles(createFireBurst(this.enemyCastle.cx, this.enemyCastle.cy, 15));
-        this.addParticles(createSparkle(this.enemyCastle.cx, this.enemyCastle.cy, 10));
+        this.addParticles(createFireBurst(this.enemyCastle.cx, this.enemyCastle.cy, 20));
+        this.addParticles(createSparkle(this.enemyCastle.cx, this.enemyCastle.cy, 15));
     }
 
     addParticles(newParticles) {
@@ -210,7 +240,44 @@ export class StageManager {
         }
     }
 
+    addFloatingText(x, y, text, options) {
+        this.floatingTexts.push(new FloatingText(x, y, text, options));
+        if (this.floatingTexts.length > 40) {
+            this.floatingTexts = this.floatingTexts.slice(-30);
+        }
+    }
+
+    showDamageNumber(x, y, amount, isPower = false) {
+        const text = String(Math.ceil(amount));
+        this.addFloatingText(x, y - 10, text, {
+            color: isPower ? '#FFD54F' : '#FFF',
+            outlineColor: isPower ? '#E65100' : '#0D47A1',
+            size: isPower ? 22 : 16,
+            vy: -100,
+            gravity: 320,
+            lifetime: 0.7,
+        });
+    }
+
+    showComboText(x, y, combo) {
+        if (combo < 3) return;
+        let color = '#FFEB3B';
+        if (combo >= 5) color = '#FF9800';
+        if (combo >= 10) color = '#F44336';
+        this.addFloatingText(x, y - 28, `${combo} COMBO!`, {
+            color,
+            outlineColor: '#000',
+            size: 18 + Math.min(8, combo - 3),
+            vy: -70,
+            gravity: 200,
+            lifetime: 0.8,
+            shake: combo >= 5 ? 1 : 0,
+        });
+    }
+
     draw(ctx, sprite) {
+        const groundY = this.game.groundY;
+
         // 집
         this.house.draw(ctx, sprite);
 
@@ -221,12 +288,12 @@ export class StageManager {
 
         // 적
         for (const enemy of this.enemies) {
-            enemy.draw(ctx, sprite);
+            enemy.draw(ctx, sprite, groundY);
         }
 
         // 보스
         if (this.boss && this.boss.active) {
-            this.boss.draw(ctx, sprite);
+            this.boss.draw(ctx, sprite, groundY);
         }
 
         // 파워업
@@ -237,6 +304,11 @@ export class StageManager {
         // 파티클
         for (const p of this.particles) {
             p.draw(ctx);
+        }
+
+        // 플로팅 텍스트 (가장 위)
+        for (const ft of this.floatingTexts) {
+            ft.draw(ctx);
         }
     }
 }

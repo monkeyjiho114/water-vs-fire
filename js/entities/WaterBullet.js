@@ -34,9 +34,19 @@ export class WaterBullet extends Entity {
 
         this.vx = goingRight ? BULLET_SPEED : -BULLET_SPEED;
         this.lifetime = 2;
+
+        // 트레일 (잔상)
+        this.trail = [];
+        this.trailMax = isPowerShot ? 8 : isCannon ? 6 : 4;
     }
 
     update(dt) {
+        // 트레일 기록 (이전 위치)
+        this.trail.push({ x: this.cx, y: this.cy });
+        if (this.trail.length > this.trailMax) {
+            this.trail.shift();
+        }
+
         super.update(dt);
         this.lifetime -= dt;
         if (this.lifetime <= 0 || this.x < -50 || this.x > BASE_WIDTH + 50) {

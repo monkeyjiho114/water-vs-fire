@@ -6,7 +6,7 @@ export class CollisionManager {
         this._damageSoundCD = 0;
     }
 
-    check(player, stage, sound, dt) {
+    check(player, stage, sound, dt, gsm) {
         // 효과음 쿨다운 감소
         const tickDt = dt || 1/60;
         if (this._houseHitSoundCD > 0) this._houseHitSoundCD -= tickDt;
@@ -27,11 +27,14 @@ export class CollisionManager {
                     enemy.takeDamage(bullet.damage);
                     bullet.active = false;
                     stage.addParticles(createSteamParticles(bullet.cx, bullet.cy));
+                    stage.showDamageNumber(enemy.cx, enemy.y, bullet.damage, bullet.isPowerShot);
                     if (sound) sound.playHit();
+                    if (gsm) gsm.onHit(false);
                     if (!enemy.active) {
                         stage.onEnemyKilled(enemy);
                         stage.tryDropPowerUp(enemy.cx, enemy.cy);
                         if (sound) sound.playMonsterDefeat();
+                        if (gsm) gsm.onEnemyKilled(enemy);
                     }
                     break;
                 }
@@ -46,10 +49,13 @@ export class CollisionManager {
                     boss.takeDamage(bullet.damage);
                     bullet.active = false;
                     stage.addParticles(createSteamParticles(bullet.cx, bullet.cy));
+                    stage.showDamageNumber(bullet.cx, bullet.cy - 20, bullet.damage, bullet.isPowerShot);
                     if (sound) sound.playHit();
+                    if (gsm) gsm.onHit(true);
                     if (!boss.active) {
                         stage.onBossKilled();
                         if (sound) sound.playMonsterDefeat();
+                        if (gsm) gsm.onBossKilled();
                     }
                     break;
                 }
@@ -60,11 +66,15 @@ export class CollisionManager {
                 if (!fb.active) continue;
                 const fbBounds = { x: fb.x - fb.width / 2, y: fb.y - fb.height / 2, w: fb.width, h: fb.height };
                 if (this._overlaps(player.getBounds(), fbBounds)) {
-                    player.takeDamage(fb.damage);
+                    const wasInv = player.invincibleTimer > 0;
+                    player.takeDamage(fb.damage, fb.x);
                     fb.active = false;
-                    if (sound && this._damageSoundCD <= 0) {
-                        sound.playDamage();
-                        this._damageSoundCD = 0.3;
+                    if (!wasInv) {
+                        if (sound && this._damageSoundCD <= 0) {
+                            sound.playDamage();
+                            this._damageSoundCD = 0.3;
+                        }
+                        if (gsm) gsm.onPlayerHit();
                     }
                 }
             }
@@ -76,6 +86,7 @@ export class CollisionManager {
                     sound.playHouseHit();
                     this._houseHitSoundCD = 0.5;
                 }
+                if (gsm) gsm.onHouseHit();
             }
         }
 
@@ -87,10 +98,13 @@ export class CollisionManager {
                     stage.enemyCastle.takeDamage(bullet.damage);
                     bullet.active = false;
                     stage.addParticles(createSteamParticles(bullet.cx, bullet.cy));
+                    stage.showDamageNumber(bullet.cx, bullet.cy - 8, bullet.damage, bullet.isPowerShot);
                     if (sound) sound.playCastleHit();
+                    if (gsm) gsm.onHit(false);
                     if (!stage.enemyCastle.active) {
                         stage.onCastleDestroyed();
                         if (sound) sound.playCastleDestroy();
+                        if (gsm) gsm.onCastleDestroyed();
                     }
                     break;
                 }
@@ -107,6 +121,7 @@ export class CollisionManager {
                         sound.playHouseHit();
                         this._houseHitSoundCD = 0.5;
                     }
+                    if (gsm) gsm.onHouseHit();
                 }
             }
         }
@@ -115,10 +130,14 @@ export class CollisionManager {
         for (const enemy of enemies) {
             if (!enemy.active) continue;
             if (this._overlaps(player.getBounds(), enemy.getBounds())) {
-                player.takeDamage(enemy.damage);
-                if (sound && this._damageSoundCD <= 0) {
-                    sound.playDamage();
-                    this._damageSoundCD = 0.3;
+                const wasInv = player.invincibleTimer > 0;
+                player.takeDamage(enemy.damage, enemy.cx);
+                if (!wasInv) {
+                    if (sound && this._damageSoundCD <= 0) {
+                        sound.playDamage();
+                        this._damageSoundCD = 0.3;
+                    }
+                    if (gsm) gsm.onPlayerHit();
                 }
             }
         }
@@ -130,6 +149,9 @@ export class CollisionManager {
                 pu.active = false;
                 player.activatePowerUp();
                 stage.addParticles(createWaterSplash(pu.cx, pu.cy));
+                stage.addFloatingText(pu.cx, pu.cy - 10, '강화!', {
+                    color: '#FFD54F', outlineColor: '#E65100', size: 22, vy: -80, lifetime: 1,
+                });
                 if (sound) sound.playPowerUp();
             }
         }

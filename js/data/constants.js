@@ -7,19 +7,19 @@ export const GRAVITY = 1200;
 export const GROUND_RATIO = 0.83; // 바닥 위치 비율 (캔버스 높이 대비)
 
 // 플레이어
-export const PLAYER_SPEED = 250;
-export const PLAYER_JUMP_FORCE = -500;
-export const PLAYER_HP = 5;
+export const PLAYER_SPEED = 270;
+export const PLAYER_JUMP_FORCE = -520;
+export const PLAYER_HP = 6;
 export const PLAYER_WIDTH = 40;
 export const PLAYER_HEIGHT = 50;
 export const PLAYER_INVINCIBLE_TIME = 1.5;
 
 // 물총알 (기본)
-export const BULLET_SPEED = 500;
+export const BULLET_SPEED = 550;
 export const BULLET_DAMAGE = 1;
 export const BULLET_WIDTH = 12;
 export const BULLET_HEIGHT = 10;
-export const SHOOT_COOLDOWN = 0.35;
+export const SHOOT_COOLDOWN = 0.28;
 
 // 얼리기 특수능력
 export const FREEZE_COOLDOWN = 15;

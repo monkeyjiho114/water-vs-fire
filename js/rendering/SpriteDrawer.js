@@ -105,38 +105,80 @@ export class SpriteDrawer {
 
         ctx.shadowBlur = 0;
 
-        // 하이라이트
+        // 하이라이트 (메인 광택)
         ctx.beginPath();
-        ctx.ellipse(x + w * 0.35, drawY + h * 0.3, 4, 6, -0.3, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.ellipse(x + w * 0.32, drawY + h * 0.28, 5, 7, -0.3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
         ctx.fill();
 
-        // 눈
-        const eyeY = drawY + h * 0.45;
+        // 작은 보조 하이라이트
         ctx.beginPath();
-        ctx.ellipse(x + w * 0.35, eyeY, 4, 5, 0, 0, Math.PI * 2);
-        ctx.fillStyle = '#333';
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(x + w * 0.37, eyeY - 1.5, 1.5, 0, Math.PI * 2);
-        ctx.fillStyle = '#FFF';
+        ctx.arc(x + w * 0.62, drawY + h * 0.25, 1.6, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
         ctx.fill();
 
+        // 깜빡임 (자연스러운 눈 깜빡임)
+        const blinkCycle = (time + 0.7) % 4;
+        const isBlinking = blinkCycle < 0.12;
+        const eyeY = drawY + h * 0.48;
+
+        if (isBlinking) {
+            // 깜빡임 — 가는 선
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.moveTo(x + w * 0.32, eyeY);
+            ctx.lineTo(x + w * 0.40, eyeY);
+            ctx.moveTo(x + w * 0.62, eyeY);
+            ctx.lineTo(x + w * 0.70, eyeY);
+            ctx.stroke();
+        } else {
+            // 왼쪽 눈
+            ctx.beginPath();
+            ctx.ellipse(x + w * 0.36, eyeY, 4.5, 5.5, 0, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFF';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(x + w * 0.36, eyeY + 0.8, 3, 4, 0, 0, Math.PI * 2);
+            ctx.fillStyle = '#1A1A1A';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x + w * 0.37, eyeY - 0.5, 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFF';
+            ctx.fill();
+
+            // 오른쪽 눈
+            ctx.beginPath();
+            ctx.ellipse(x + w * 0.66, eyeY, 4.5, 5.5, 0, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFF';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(x + w * 0.66, eyeY + 0.8, 3, 4, 0, 0, Math.PI * 2);
+            ctx.fillStyle = '#1A1A1A';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x + w * 0.67, eyeY - 0.5, 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFF';
+            ctx.fill();
+        }
+
+        // 볼터치
+        ctx.fillStyle = 'rgba(255,150,180,0.4)';
         ctx.beginPath();
-        ctx.ellipse(x + w * 0.65, eyeY, 4, 5, 0, 0, Math.PI * 2);
-        ctx.fillStyle = '#333';
+        ctx.ellipse(x + w * 0.25, drawY + h * 0.6, 3, 2, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(x + w * 0.67, eyeY - 1.5, 1.5, 0, Math.PI * 2);
-        ctx.fillStyle = '#FFF';
+        ctx.ellipse(x + w * 0.75, drawY + h * 0.6, 3, 2, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // 입
+        // 입 (부드러운 미소)
         ctx.beginPath();
-        ctx.arc(x + w * 0.5, drawY + h * 0.58, 5, 0.1, Math.PI - 0.1);
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 1.5;
+        ctx.arc(x + w * 0.5, drawY + h * 0.6, 5, 0.15, Math.PI - 0.15);
+        ctx.strokeStyle = '#1A1A1A';
+        ctx.lineWidth = 1.7;
+        ctx.lineCap = 'round';
         ctx.stroke();
+        ctx.lineCap = 'butt';
 
         // 물대포/물총
         const gunX = x + w * 0.8;
@@ -170,22 +212,38 @@ export class SpriteDrawer {
         }
 
         ctx.restore();
+        ctx.restore();
+    }
 
-        // 머리 위 "워드" 텍스트
-        const wardY = drawY - 14;
-        const wardX = x + w / 2;
-        // 배경 박스
-        ctx.fillStyle = 'rgba(0,0,0,0.55)';
-        const wardW = 36, wardH = 16;
-        this._roundRect(ctx, wardX - wardW / 2, wardY - wardH / 2, wardW, wardH, 4);
+    // 캐릭터/오브젝트 그림자 (지면에 그림)
+    drawShadow(ctx, cx, groundY, width, alpha = 0.22) {
+        ctx.save();
+        ctx.fillStyle = `rgba(0,0,0,${alpha})`;
+        ctx.beginPath();
+        ctx.ellipse(cx, groundY - 1, width * 0.45, 4, 0, 0, Math.PI * 2);
         ctx.fill();
-        // 텍스트
-        ctx.fillStyle = '#FFF';
-        ctx.font = 'bold 11px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('워드', wardX, wardY);
+        ctx.restore();
+    }
 
+    // 발사 시 머즈 플래시 효과
+    drawMuzzleFlash(ctx, x, y, facingRight, isCannon, isPower, time) {
+        ctx.save();
+        const dir = facingRight ? 1 : -1;
+        const flashSize = isCannon ? 14 : 9;
+        const grad = ctx.createRadialGradient(x, y, 1, x, y, flashSize);
+        if (isPower) {
+            grad.addColorStop(0, 'rgba(255,255,200,1)');
+            grad.addColorStop(0.5, 'rgba(255,180,40,0.9)');
+            grad.addColorStop(1, 'rgba(255,100,0,0)');
+        } else {
+            grad.addColorStop(0, 'rgba(255,255,255,1)');
+            grad.addColorStop(0.5, 'rgba(180,230,255,0.8)');
+            grad.addColorStop(1, 'rgba(79,195,247,0)');
+        }
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.ellipse(x + dir * flashSize * 0.5, y, flashSize, flashSize * 0.7, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
     }
 
@@ -210,8 +268,29 @@ export class SpriteDrawer {
         const skinColor = bulletSkin && bulletSkin.color ? bulletSkin.color : COLORS.waterMid;
         const isRainbow = skinColor === 'rainbow';
 
+        // 트레일 (잔상) — 모든 총알 타입
+        if (bullet.trail && bullet.trail.length > 1) {
+            for (let i = 0; i < bullet.trail.length; i++) {
+                const t = (i + 1) / bullet.trail.length;
+                const tp = bullet.trail[i];
+                const trailSize = bullet.width * 0.5 * t;
+                ctx.globalAlpha = t * 0.5;
+                let trailColor;
+                if (bullet.isPowerShot) trailColor = '#FFD54F';
+                else if (isRainbow) trailColor = `hsl(${(Date.now() / 10 + tp.x * 2) % 360}, 80%, 60%)`;
+                else trailColor = skinColor;
+                ctx.fillStyle = trailColor;
+                ctx.beginPath();
+                ctx.arc(tp.x, tp.y, trailSize, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+        }
+
         if (bullet.isPowerShot) {
-            // 강화 총알 — 오렌지 글로우 (강화 상태는 스킨 무관)
+            // 강화 총알 — 글로우 + 화염 트레일
+            ctx.shadowColor = '#FFD54F';
+            ctx.shadowBlur = 12;
             const grad = ctx.createRadialGradient(bullet.cx, bullet.cy, 1, bullet.cx, bullet.cy, bullet.width / 2);
             grad.addColorStop(0, '#FFF9C4');
             grad.addColorStop(0.5, '#FFD54F');
@@ -220,7 +299,10 @@ export class SpriteDrawer {
             ctx.beginPath();
             ctx.ellipse(bullet.cx, bullet.cy, bullet.width / 2, bullet.height / 2, 0, 0, Math.PI * 2);
             ctx.fill();
+            ctx.shadowBlur = 0;
         } else if (bullet.isCannon) {
+            ctx.shadowColor = isRainbow ? '#FFF' : skinColor;
+            ctx.shadowBlur = 10;
             const grad = ctx.createRadialGradient(bullet.cx, bullet.cy, 1, bullet.cx, bullet.cy, bullet.width / 2);
             if (isRainbow) {
                 const hue = (Date.now() / 10 + bullet.x * 2) % 360;
@@ -238,7 +320,8 @@ export class SpriteDrawer {
             ctx.beginPath();
             ctx.ellipse(bullet.cx, bullet.cy, bullet.width / 2, bullet.height / 2, 0, 0, Math.PI * 2);
             ctx.fill();
-            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
             ctx.beginPath();
             ctx.arc(bullet.cx - 3, bullet.cy - 2, 3, 0, Math.PI * 2);
             ctx.fill();
@@ -586,14 +669,35 @@ export class SpriteDrawer {
     // === 화염구 ===
     drawFireball(ctx, x, y, size) {
         ctx.save();
+        // 외곽 글로우
+        ctx.shadowColor = COLORS.fireOrange;
+        ctx.shadowBlur = 14;
         const grad = ctx.createRadialGradient(x, y, 1, x, y, size);
         grad.addColorStop(0, COLORS.fireYellow);
-        grad.addColorStop(0.6, COLORS.fireOrange);
+        grad.addColorStop(0.5, COLORS.fireOrange);
         grad.addColorStop(1, 'rgba(211,47,47,0.5)');
         ctx.fillStyle = grad;
         ctx.beginPath();
         ctx.arc(x, y, size, 0, Math.PI * 2);
         ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // 작은 흰 핵
+        ctx.fillStyle = 'rgba(255,255,200,0.9)';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 흔들리는 불꽃 꼬리
+        const t = Date.now() / 1000;
+        for (let i = 0; i < 3; i++) {
+            const tailX = x + size + i * 4;
+            const tailY = y + Math.sin(t * 12 + i) * 3;
+            ctx.fillStyle = `rgba(255,${107 + i * 20},${50 + i * 30},${0.6 - i * 0.15})`;
+            ctx.beginPath();
+            ctx.arc(tailX, tailY, size * (0.7 - i * 0.18), 0, Math.PI * 2);
+            ctx.fill();
+        }
         ctx.restore();
     }
 
@@ -694,9 +798,22 @@ export class SpriteDrawer {
     drawHouse(ctx, x, y, w, h, hpRatio, time) {
         ctx.save();
 
+        // 그림자
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(x + w / 2, y + h + 4, w * 0.5, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 살짝 흔들리는 효과
+        const sway = Math.sin(time * 1.5) * 0.5;
+        ctx.translate(x + w / 2, y + h);
+        ctx.rotate(sway * 0.01);
+        ctx.translate(-(x + w / 2), -(y + h));
+
         const grad = ctx.createLinearGradient(x, y, x, y + h);
         grad.addColorStop(0, '#E1F5FE');
-        grad.addColorStop(1, COLORS.waterLight);
+        grad.addColorStop(0.6, COLORS.waterLight);
+        grad.addColorStop(1, COLORS.waterMid);
 
         ctx.beginPath();
         ctx.moveTo(x + w / 2, y);
@@ -708,6 +825,12 @@ export class SpriteDrawer {
         ctx.strokeStyle = COLORS.waterDark;
         ctx.lineWidth = 2;
         ctx.stroke();
+
+        // 하이라이트
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.beginPath();
+        ctx.ellipse(x + w * 0.32, y + h * 0.25, 6, 10, -0.3, 0, Math.PI * 2);
+        ctx.fill();
 
         // 문
         ctx.fillStyle = '#0277BD';

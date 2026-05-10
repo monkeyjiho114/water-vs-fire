@@ -145,7 +145,11 @@ export class BossMonster extends Entity {
         return false;
     }
 
-    draw(ctx, sprite) {
+    draw(ctx, sprite, groundY) {
+        // 그림자 (보스는 큰 그림자)
+        if (groundY !== undefined) {
+            sprite.drawShadow(ctx, this.cx, groundY, this.width * 1.0, 0.3);
+        }
         sprite.drawBossMonster(ctx, this.x, this.y, this.width, this.height, this.phase, this.time, this.hitFlash > 0, this.frozen, this.attackAnim);
 
         for (const fb of this.fireballs) {

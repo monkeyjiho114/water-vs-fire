@@ -28,6 +28,13 @@ export class Player extends Entity {
         this.powerUpTimer = 0;
         this.isPoweredUp = false;
 
+        // 비주얼 효과
+        this.muzzleFlashTime = 0; // 발사 시 짧은 플래시
+        this.muzzleFlashIsCannon = false;
+        this.muzzleFlashIsPower = false;
+        this.knockbackVx = 0; // 피격 시 넉백
+        this.squashTime = 0; // 착지 시 squash 애니메이션
+
         this.groundY = groundY;
     }
 
@@ -43,6 +50,9 @@ export class Player extends Entity {
         this.freezeActive = false;
         this.powerUpTimer = 0;
         this.isPoweredUp = false;
+        this.muzzleFlashTime = 0;
+        this.knockbackVx = 0;
+        this.squashTime = 0;
     }
 
     activatePowerUp() {
@@ -67,14 +77,25 @@ export class Player extends Entity {
             }
         }
 
+        // 머즈 플래시 / 스쿼시 타이머
+        if (this.muzzleFlashTime > 0) this.muzzleFlashTime -= dt;
+        if (this.squashTime > 0) this.squashTime -= dt;
+
+        // 넉백 감쇠
+        if (Math.abs(this.knockbackVx) > 1) {
+            this.knockbackVx *= Math.pow(0.001, dt); // 빠르게 감쇠
+        } else {
+            this.knockbackVx = 0;
+        }
+
         // 좌우 이동
-        this.vx = 0;
+        this.vx = this.knockbackVx;
         if (input.left) {
-            this.vx = -PLAYER_SPEED;
+            this.vx = -PLAYER_SPEED + this.knockbackVx;
             this.facingRight = false;
         }
         if (input.right) {
-            this.vx = PLAYER_SPEED;
+            this.vx = PLAYER_SPEED + this.knockbackVx;
             this.facingRight = true;
         }
 
@@ -98,8 +119,11 @@ export class Player extends Entity {
             this.y = this.groundY - this.height;
             this.vy = 0;
             this.isOnGround = true;
-            // 착지 효과음 (공중에서 착지했을 때만)
-            if (!wasOnGround && sound) sound.playLand();
+            // 착지 효과음 + 스쿼시 (공중에서 착지했을 때만)
+            if (!wasOnGround) {
+                if (sound) sound.playLand();
+                this.squashTime = 0.18;
+            }
         }
 
         // 화면 경계
@@ -130,6 +154,10 @@ export class Player extends Entity {
         if (input.shoot && this.shootCooldown <= 0) {
             this.shootCooldown = cooldown;
             this._shoot(cannonComplete, isPowerShot);
+            // 머즈 플래시 활성화
+            this.muzzleFlashTime = 0.08;
+            this.muzzleFlashIsCannon = cannonComplete;
+            this.muzzleFlashIsPower = isPowerShot;
             // 발사 효과음
             if (sound) {
                 if (isPowerShot) sound.playPowerShot();
@@ -152,21 +180,55 @@ export class Player extends Entity {
         this.bullets.push(bullet);
     }
 
-    takeDamage(amount) {
+    takeDamage(amount, sourceX) {
         if (this.invincibleTimer > 0) return;
         this.hp -= amount;
         this.invincibleTimer = PLAYER_INVINCIBLE_TIME;
         if (this.hp < 0) this.hp = 0;
+        // 넉백 (피격원 방향과 반대로)
+        if (sourceX !== undefined) {
+            const dir = sourceX < this.cx ? 1 : -1;
+            this.knockbackVx = dir * 220;
+        }
     }
 
     draw(ctx, sprite, cannonComplete, skins) {
-        // 무적 시 깜빡임
-        if (this.invincibleTimer > 0 && Math.floor(this.invincibleTimer * 10) % 2 === 0) {
-            return;
+        // 그림자는 항상 그림 (무적 깜빡임 중에도)
+        sprite.drawShadow(ctx, this.cx, this.groundY, this.width);
+
+        // 무적 시 알파 깜빡임 (사라지지 않고 투명도만 변경)
+        const isInvincible = this.invincibleTimer > 0;
+        let alpha = 1;
+        if (isInvincible) {
+            // 8Hz로 깜빡이되 50%~100% 알파만 사용
+            alpha = 0.5 + 0.5 * (Math.floor(this.invincibleTimer * 12) % 2);
         }
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        // 스쿼시 (착지 시)
+        if (this.squashTime > 0) {
+            const t = this.squashTime / 0.18;
+            const scaleX = 1 + (1 - t) * 0.15;
+            const scaleY = 1 - (1 - t) * 0.15;
+            ctx.translate(this.cx, this.y + this.height);
+            ctx.scale(scaleX, scaleY);
+            ctx.translate(-this.cx, -(this.y + this.height));
+        }
+
         const bodySkin = skins ? skins.body : null;
         const bulletSkin = skins ? skins.bullet : null;
         sprite.drawPlayer(ctx, this.x, this.y, this.width, this.height, this.facingRight, cannonComplete, this.time, this.isPoweredUp, bodySkin);
+
+        ctx.restore();
+
+        // 머즈 플래시 (총알 발사 위치)
+        if (this.muzzleFlashTime > 0) {
+            const fx = this.facingRight ? this.x + this.width + 8 : this.x - 8;
+            const fy = this.cy - 4 + Math.sin(this.time * 4) * 2; // bob과 맞춤
+            sprite.drawMuzzleFlash(ctx, fx, fy, this.facingRight, cannonComplete, this.isPoweredUp, this.time);
+        }
 
         // 총알 그리기
         for (const b of this.bullets) {

@@ -22,6 +22,18 @@ export class GameStateManager {
         this.score = 0;
         this.currentStageIndex = 0;
 
+        // 콤보 시스템
+        this.combo = 0;
+        this.comboTimer = 0;
+        this.comboMaxTimer = 1.8; // 1.8초 안에 다음 적 처치하면 콤보 유지
+        this.maxCombo = 0;
+
+        // 스테이지 시작 배너
+        this.stageBannerTimer = 0;
+
+        // 히트 스톱 (시간 정지 효과)
+        this.hitPauseTime = 0;
+
         // 난이도
         this.difficultyIndex = 1;
         this.difficulty = 'normal';
@@ -120,6 +132,9 @@ export class GameStateManager {
         this.materialsCollected = 0;
         this.cannonComplete = false;
         this.score = 0;
+        this.combo = 0;
+        this.comboTimer = 0;
+        this.maxCombo = 0;
         this.currentStageIndex = 0;
         this.player = new Player(this.game);
         this._loadStage(0);
@@ -129,11 +144,75 @@ export class GameStateManager {
         this.currentStageIndex = index;
         this.stage = new StageManager(this.game, index, this.cannonComplete, this.difficulty);
         this.stage.sound = this.sound;
+        // 스테이지 시작 배너
+        this.stageBannerTimer = 2.5;
+        // 콤보 초기화 (스테이지 새로 시작 시)
+        this.combo = 0;
+        this.comboTimer = 0;
     }
 
     shake(amount, duration) {
-        this.shakeAmount = amount;
-        this.shakeTimer = duration;
+        this.shakeAmount = Math.max(this.shakeAmount, amount);
+        this.shakeTimer = Math.max(this.shakeTimer, duration);
+    }
+
+    hitPause(duration) {
+        this.hitPauseTime = Math.max(this.hitPauseTime, duration);
+    }
+
+    // === 게임 이벤트 콜백 (CollisionManager에서 호출) ===
+    onHit(isBoss) {
+        // 콤보 유지 (콤보 자체는 적이 죽었을 때만 증가)
+        // 작은 흔들림 + 작은 hit pause
+        this.shake(isBoss ? 2 : 1, 0.08);
+        if (isBoss) this.hitPause(0.025);
+    }
+
+    onEnemyKilled(enemy) {
+        this.combo++;
+        if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+        this.comboTimer = this.comboMaxTimer;
+
+        // 점수 (몬스터 종류별 + 콤보 보너스)
+        const baseScore = enemy.maxHp * 10;
+        const comboMul = 1 + Math.min(2, this.combo * 0.1);
+        const earned = Math.ceil(baseScore * comboMul);
+        this.score += earned;
+
+        // 콤보 텍스트
+        if (this.stage) {
+            this.stage.showComboText(enemy.cx, enemy.y, this.combo);
+            // 점수 표시 (적 죽으면)
+            this.stage.addFloatingText(enemy.cx, enemy.cy + 20, `+${earned}`, {
+                color: '#FFD700', outlineColor: '#5D4037', size: 13, vy: -50, lifetime: 0.7,
+            });
+        }
+
+        this.shake(2, 0.12);
+        this.hitPause(0.04);
+    }
+
+    onBossKilled() {
+        this.score += 1000;
+        this.shake(8, 0.6);
+        this.hitPause(0.3);
+    }
+
+    onCastleDestroyed() {
+        this.score += 500;
+        this.shake(6, 0.5);
+        this.hitPause(0.15);
+    }
+
+    onPlayerHit() {
+        this.combo = 0;
+        this.comboTimer = 0;
+        this.shake(4, 0.25);
+        this.hitPause(0.08);
+    }
+
+    onHouseHit() {
+        this.shake(2, 0.12);
     }
 
     get activeSkins() {
@@ -144,11 +223,27 @@ export class GameStateManager {
     }
 
     update(dt) {
+        // Hit pause: 플레이 중일 때만 게임 시간 정지
+        if (this.hitPauseTime > 0 && this.state === STATES.PLAYING) {
+            this.hitPauseTime -= dt;
+            this.transitionTimer += dt;
+            // 플레이어/스테이지 업데이트 스킵, 입력만 살아있음
+            return;
+        }
+        if (this.hitPauseTime > 0) this.hitPauseTime -= dt;
+
         this.transitionTimer += dt;
+        if (this.stageBannerTimer > 0) this.stageBannerTimer -= dt;
 
         if (this.shakeTimer > 0) {
             this.shakeTimer -= dt;
             if (this.shakeTimer <= 0) this.shakeAmount = 0;
+        }
+
+        // 콤보 타이머
+        if (this.comboTimer > 0) {
+            this.comboTimer -= dt;
+            if (this.comboTimer <= 0) this.combo = 0;
         }
 
         const input = this.game.input;
@@ -383,7 +478,7 @@ export class GameStateManager {
 
         player.update(dt, this.game.input, this.cannonComplete, freezeEnabled, this.sound);
         stage.update(dt, player);
-        this.collision.check(player, stage, this.sound, dt);
+        this.collision.check(player, stage, this.sound, dt, this);
 
         // 얼리기 발동
         if (player.freezeActive) {
@@ -479,7 +574,11 @@ export class GameStateManager {
         if (this.stage) this.stage.draw(ctx, this.sprite);
         if (this.player) this.player.draw(ctx, this.sprite, this.cannonComplete, skins);
         if (this.stage && this.player) {
-            this.ui.drawHUD(ctx, this.player, this.stage, this.materialsCollected, this.cannonComplete, this.currentStageIndex, this.difficulty);
+            this.ui.drawHUD(ctx, this.player, this.stage, this.materialsCollected, this.cannonComplete, this.currentStageIndex, this.difficulty, this.score, this.combo, this.comboTimer / this.comboMaxTimer);
+        }
+        // 스테이지 시작 배너
+        if (this.stageBannerTimer > 0 && this.stage) {
+            this.ui.drawStageBanner(ctx, this.currentStageIndex, this.stage.stageData.name, this.stageBannerTimer, this.difficulty);
         }
     }
 }

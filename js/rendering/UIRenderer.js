@@ -8,29 +8,61 @@ export class UIRenderer {
 
     // === 메인 메뉴 ===
     drawMenu(ctx, time, difficultyIndex, coins) {
-        // 배경
+        // 배경 (그라데이션 하늘)
         const grad = ctx.createLinearGradient(0, 0, 0, BASE_HEIGHT);
-        grad.addColorStop(0, '#0D47A1');
+        grad.addColorStop(0, '#01579B');
+        grad.addColorStop(0.5, '#0277BD');
         grad.addColorStop(1, '#4FC3F7');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
+
+        // 떠다니는 물방울 배경 효과
+        for (let i = 0; i < 12; i++) {
+            const dx = ((i * 137 + time * 30) % (BASE_WIDTH + 40)) - 20;
+            const dy = ((i * 89 + time * 50) % (BASE_HEIGHT + 40)) - 20;
+            const ds = 4 + (i % 3) * 2;
+            ctx.fillStyle = `rgba(179,229,252,${0.15 + (i % 3) * 0.1})`;
+            ctx.beginPath();
+            ctx.arc(dx, dy, ds, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 떨어지는 불꽃 효과
+        for (let i = 0; i < 8; i++) {
+            const fx = ((i * 211 + time * 40) % (BASE_WIDTH + 30)) - 15;
+            const fy = ((i * 167 + time * 80) % (BASE_HEIGHT + 30)) - 15;
+            ctx.fillStyle = `rgba(255,140,0,${0.2 + Math.sin(time * 3 + i) * 0.15})`;
+            ctx.beginPath();
+            ctx.ellipse(fx, fy, 3, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         // 타이틀
         const bounce = Math.sin(time * 3) * 8;
         ctx.save();
         ctx.textAlign = 'center';
 
+        // 타이틀 그림자
+        ctx.shadowColor = '#000';
+        ctx.shadowBlur = 10;
+
         ctx.fillStyle = '#FFF';
-        ctx.font = 'bold 52px sans-serif';
-        ctx.fillText('Water', BASE_WIDTH / 2, 160 + bounce);
+        ctx.font = 'bold 60px sans-serif';
+        ctx.fillText('Water', BASE_WIDTH / 2, 150 + bounce);
 
         ctx.fillStyle = COLORS.fireOrange;
         ctx.font = 'bold 32px sans-serif';
-        ctx.fillText('vs', BASE_WIDTH / 2, 200 + bounce);
+        ctx.fillText('VS', BASE_WIDTH / 2, 195 + bounce);
 
         ctx.fillStyle = COLORS.fireRed;
-        ctx.font = 'bold 52px sans-serif';
-        ctx.fillText('Fire', BASE_WIDTH / 2, 248 + bounce);
+        ctx.font = 'bold 60px sans-serif';
+        ctx.fillText('Fire', BASE_WIDTH / 2, 250 + bounce);
+        ctx.shadowBlur = 0;
+
+        // 부제
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.font = 'italic 14px sans-serif';
+        ctx.fillText('— 물방울 용사의 모험 —', BASE_WIDTH / 2, 280 + bounce);
 
         // 난이도 선택
         const diffY = 310;
@@ -67,20 +99,53 @@ export class UIRenderer {
             ctx.fillText('얼리기 능력 사용 가능!', BASE_WIDTH / 2, diffY + 65);
         }
 
-        // 코인 표시
+        // 코인 표시 (멋진 박스)
+        const coinBoxW = 110;
+        const coinBoxH = 36;
+        const coinBoxX = BASE_WIDTH - coinBoxW - 12;
+        const coinBoxY = 12;
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        this._roundRect(ctx, coinBoxX, coinBoxY, coinBoxW, coinBoxH, 8);
+        ctx.fill();
+        ctx.strokeStyle = COLORS.gold;
+        ctx.lineWidth = 1.5;
+        this._roundRect(ctx, coinBoxX, coinBoxY, coinBoxW, coinBoxH, 8);
+        ctx.stroke();
+
+        // 코인 아이콘
+        const coinIconX = coinBoxX + 22;
+        const coinIconY = coinBoxY + coinBoxH / 2;
+        const coinSpin = Math.sin(time * 3);
+        ctx.save();
+        ctx.translate(coinIconX, coinIconY);
+        ctx.scale(Math.abs(coinSpin), 1);
+        ctx.fillStyle = '#FFD700';
+        ctx.beginPath();
+        ctx.arc(0, 0, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#FFA000';
+        ctx.beginPath();
+        ctx.arc(0, 0, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.textAlign = 'left';
         ctx.fillStyle = COLORS.gold;
-        ctx.font = 'bold 16px sans-serif';
-        ctx.textAlign = 'right';
-        ctx.fillText(`코인: ${coins}`, BASE_WIDTH - 20, 30);
+        ctx.font = 'bold 18px sans-serif';
+        ctx.fillText(coins.toString(), coinBoxX + 38, coinBoxY + 24);
 
         ctx.textAlign = 'center';
 
-        // 시작 안내
-        if (Math.floor(time * 2) % 2 === 0) {
-            ctx.fillStyle = '#FFF';
-            ctx.font = '20px sans-serif';
-            ctx.fillText(this.isMobile ? '터치해서 시작!' : '아무 키나 눌러서 시작!', BASE_WIDTH / 2, 430);
-        }
+        // 시작 안내 (강조된 박스)
+        const startPulse = Math.sin(time * 4) * 0.3 + 0.7;
+        ctx.globalAlpha = startPulse;
+        ctx.fillStyle = '#FFF';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.shadowColor = '#000';
+        ctx.shadowBlur = 6;
+        ctx.fillText(this.isMobile ? '▶ 터치해서 시작 ▶' : '▶ 아무 키나 눌러서 시작 ▶', BASE_WIDTH / 2, 430);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
 
         // 상점 안내
         if (this.isMobile) {
@@ -322,82 +387,149 @@ export class UIRenderer {
     }
 
     // === HUD ===
-    drawHUD(ctx, player, stage, materialsCollected, cannonComplete, stageIndex, difficulty) {
+    drawHUD(ctx, player, stage, materialsCollected, cannonComplete, stageIndex, difficulty, score, combo, comboRatio) {
         ctx.save();
+
+        // === 좌상단 패널 (HP, 난이도) ===
+        const panelX = 8;
+        const panelY = 8;
+        const panelW = 200;
+        const panelH = 56;
+
+        // 반투명 패널 배경
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        this._roundRect(ctx, panelX, panelY, panelW, panelH, 10);
+        ctx.fill();
 
         // 플레이어 HP (하트)
         for (let i = 0; i < player.maxHp; i++) {
-            const hx = 16 + i * 22;
-            const hy = 16;
+            const hx = panelX + 18 + i * 22;
+            const hy = panelY + 14;
             if (i < player.hp) {
                 this._drawHeart(ctx, hx, hy, 10, COLORS.hpRed);
+                // 살짝 글로우
+                ctx.save();
+                ctx.shadowColor = COLORS.hpRed;
+                ctx.shadowBlur = 6;
+                this._drawHeart(ctx, hx, hy, 10, COLORS.hpRed);
+                ctx.restore();
             } else {
-                this._drawHeart(ctx, hx, hy, 10, '#555');
+                this._drawHeart(ctx, hx, hy, 10, 'rgba(120,120,120,0.6)');
             }
         }
 
-        // 스테이지 정보
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#FFF';
-        ctx.font = 'bold 16px sans-serif';
-        ctx.shadowColor = '#000';
-        ctx.shadowBlur = 3;
-        ctx.fillText(`Stage ${stageIndex + 1}`, BASE_WIDTH / 2, 24);
-
-        const stageNames = ['마을 입구', '숲 속 마을', '언덕 위 마을', '강가 마을', '불의 성'];
-        ctx.font = '12px sans-serif';
-        ctx.fillText(stageNames[stageIndex] || '', BASE_WIDTH / 2, 42);
-        ctx.shadowBlur = 0;
-
-        // 웨이브 정보
-        if (stage.totalWaves > 1) {
-            ctx.font = '12px sans-serif';
-            ctx.fillText(`Wave ${stage.currentWave + 1}/${stage.totalWaves}`, BASE_WIDTH / 2, 58);
-        }
-
-        // 난이도 표시
+        // 난이도 표시 (좌측 패널 하단)
         const diffLabel = DIFFICULTIES[difficulty] ? DIFFICULTIES[difficulty].label : '';
         if (diffLabel) {
             ctx.textAlign = 'left';
-            ctx.fillStyle = difficulty === 'hard' ? COLORS.fireRed : difficulty === 'easy' ? '#81C784' : '#FFF';
-            ctx.font = 'bold 12px sans-serif';
-            ctx.fillText(diffLabel, 16, 58);
+            ctx.fillStyle = difficulty === 'hard' ? '#FF7043' : difficulty === 'easy' ? '#81C784' : '#FFD54F';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText(`난이도: ${diffLabel}`, panelX + 12, panelY + 46);
         }
 
-        // 재료 수집 현황 (오른쪽 상단)
+        // === 중앙 상단 (스테이지/웨이브) ===
+        ctx.textAlign = 'center';
+        const stageNames = ['마을 입구', '숲 속 마을', '언덕 위 마을', '강가 마을', '불의 성'];
+
+        // 스테이지 패널 배경
+        const sPanelW = 180, sPanelH = 50;
+        const sPanelX = BASE_WIDTH / 2 - sPanelW / 2;
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        this._roundRect(ctx, sPanelX, 8, sPanelW, sPanelH, 10);
+        ctx.fill();
+
+        ctx.fillStyle = '#FFF';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillText(`STAGE ${stageIndex + 1}`, BASE_WIDTH / 2, 26);
+
+        ctx.fillStyle = COLORS.waterLight;
+        ctx.font = '12px sans-serif';
+        ctx.fillText(stageNames[stageIndex] || '', BASE_WIDTH / 2, 42);
+
+        // 웨이브 정보
+        if (stage.totalWaves > 1) {
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.font = '11px sans-serif';
+            ctx.fillText(`Wave ${stage.currentWave + 1}/${stage.totalWaves}`, BASE_WIDTH / 2, 56);
+        }
+
+        // === 우상단 (재료 + 점수) ===
+        const rPanelW = 200, rPanelH = 56;
+        const rPanelX = BASE_WIDTH - rPanelW - 8;
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        this._roundRect(ctx, rPanelX, 8, rPanelW, rPanelH, 10);
+        ctx.fill();
+
+        // 재료 수집 현황
         ctx.textAlign = 'right';
         ctx.fillStyle = '#FFF';
-        ctx.font = 'bold 13px sans-serif';
-        ctx.shadowColor = '#000';
-        ctx.shadowBlur = 2;
-        ctx.fillText('물대포 재료', BASE_WIDTH - 16, 20);
-        ctx.shadowBlur = 0;
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText('재료', rPanelX + rPanelW - 12, 22);
 
         for (let i = 0; i < TOTAL_MATERIALS; i++) {
-            const mx = BASE_WIDTH - 16 - (TOTAL_MATERIALS - 1 - i) * 26;
+            const mx = rPanelX + 22 + i * 26;
             const my = 28;
-            ctx.fillStyle = i < materialsCollected ? COLORS.gold : '#555';
-            ctx.strokeStyle = i < materialsCollected ? '#FF8F00' : '#333';
-            ctx.lineWidth = 2;
+            const collected = i < materialsCollected;
+            ctx.fillStyle = collected ? COLORS.gold : 'rgba(80,80,80,0.6)';
+            ctx.strokeStyle = collected ? '#FF8F00' : 'rgba(50,50,50,0.8)';
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.arc(mx, my + 8, 9, 0, Math.PI * 2);
+            ctx.arc(mx, my + 6, 8, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
-
-            if (i < materialsCollected) {
+            if (collected) {
                 ctx.fillStyle = '#FFF';
                 ctx.font = 'bold 10px sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText('✓', mx, my + 12);
+                ctx.fillText('✓', mx, my + 10);
+                ctx.textAlign = 'right';
             }
         }
 
-        // 물대포 완성 표시
+        // 점수 표시
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#FFF';
+        ctx.font = 'bold 13px sans-serif';
+        const scoreStr = (score || 0).toLocaleString('en-US');
+        ctx.fillText(`점수: ${scoreStr}`, rPanelX + rPanelW - 12, 56);
+
+        // 물대포 완성 표시 (재료 영역 옆)
         if (cannonComplete) {
-            ctx.textAlign = 'right';
+            ctx.textAlign = 'left';
             ctx.fillStyle = COLORS.gold;
-            ctx.font = 'bold 12px sans-serif';
-            ctx.fillText('물대포 완성!', BASE_WIDTH - 16, 58);
+            ctx.font = 'bold 11px sans-serif';
+            ctx.shadowColor = '#FF6F00';
+            ctx.shadowBlur = 4;
+            ctx.fillText('★ 물대포 완성!', rPanelX + 14, 56);
+            ctx.shadowBlur = 0;
+        }
+
+        // === 콤보 (좌상단 패널 아래) ===
+        if (combo && combo >= 2) {
+            ctx.textAlign = 'left';
+            const cx = panelX + 12;
+            const cy = panelY + panelH + 8;
+            // 콤보 텍스트
+            let comboColor = '#FFEB3B';
+            if (combo >= 5) comboColor = '#FF9800';
+            if (combo >= 10) comboColor = '#F44336';
+
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            this._roundRect(ctx, cx - 4, cy - 2, 130, 28, 6);
+            ctx.fill();
+
+            ctx.fillStyle = comboColor;
+            ctx.font = `bold ${15 + Math.min(8, combo - 2)}px sans-serif`;
+            ctx.shadowColor = '#000';
+            ctx.shadowBlur = 3;
+            ctx.fillText(`× ${combo}`, cx, cy + 18);
+            ctx.shadowBlur = 0;
+
+            // 콤보 게이지
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.fillRect(cx + 50, cy + 8, 70, 6);
+            ctx.fillStyle = comboColor;
+            ctx.fillRect(cx + 50, cy + 8, 70 * Math.max(0, comboRatio || 0), 6);
         }
 
         // 얼리기 쿨타임 (어려움에서만)
@@ -453,35 +585,156 @@ export class UIRenderer {
         ctx.restore();
     }
 
+    // === 스테이지 시작 배너 ===
+    drawStageBanner(ctx, stageIndex, stageName, timer, difficulty) {
+        // timer는 2.5에서 0으로 감소
+        const T = 2.5;
+        const t = T - timer; // 0 → 2.5
+        if (t < 0 || t > T) return;
+
+        const stageNames = stageName || ['마을 입구', '숲 속 마을', '언덕 위 마을', '강가 마을', '불의 성'][stageIndex];
+
+        // 슬라이드 인 / 아웃
+        let progress;
+        if (t < 0.4) {
+            progress = t / 0.4; // 슬라이드 인
+        } else if (t < T - 0.4) {
+            progress = 1; // 유지
+        } else {
+            progress = (T - t) / 0.4; // 슬라이드 아웃
+        }
+
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const slideOffset = (1 - ease) * BASE_WIDTH;
+
+        ctx.save();
+
+        const bannerY = BASE_HEIGHT * 0.35;
+        const bannerH = 80;
+
+        // 배너 배경 (사선 줄무늬)
+        ctx.fillStyle = `rgba(0,0,0,${0.5 * ease})`;
+        ctx.fillRect(0, bannerY, BASE_WIDTH, bannerH);
+
+        // 위/아래 강조 라인
+        ctx.fillStyle = `rgba(255,215,79,${ease})`;
+        ctx.fillRect(0, bannerY - 2, BASE_WIDTH, 2);
+        ctx.fillRect(0, bannerY + bannerH, BASE_WIDTH, 2);
+
+        // 텍스트 (슬라이드 인)
+        ctx.translate(-slideOffset, 0);
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#000';
+        ctx.shadowBlur = 6;
+
+        ctx.fillStyle = COLORS.gold;
+        ctx.font = 'bold 38px sans-serif';
+        ctx.fillText(`STAGE ${stageIndex + 1}`, BASE_WIDTH / 2, bannerY + 38);
+
+        ctx.fillStyle = '#FFF';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillText(stageNames, BASE_WIDTH / 2, bannerY + 68);
+
+        ctx.shadowBlur = 0;
+        ctx.restore();
+    }
+
     // === 스테이지 클리어 ===
     drawStageClear(ctx, stageIndex, materialsCollected, time) {
-        this._drawOverlay(ctx, 0.6);
+        this._drawOverlay(ctx, 0.55);
 
         ctx.save();
         ctx.textAlign = 'center';
 
-        const slideIn = Math.min(1, time * 2);
+        // 반짝이 배경
+        for (let i = 0; i < 18; i++) {
+            const sx = (Math.sin(time * 1.5 + i * 1.3) * 0.5 + 0.5) * BASE_WIDTH;
+            const sy = 100 + (Math.cos(time * 1.2 + i * 0.7) * 0.5 + 0.5) * 280;
+            ctx.fillStyle = `rgba(255,215,79,${0.5 + Math.sin(time * 4 + i) * 0.5})`;
+            ctx.beginPath();
+            ctx.arc(sx, sy, 1.5 + Math.sin(time * 5 + i) * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
-        ctx.fillStyle = '#FFF';
-        ctx.font = 'bold 40px sans-serif';
-        ctx.fillText('Stage Clear!', BASE_WIDTH / 2, 180 * slideIn + 50 * (1 - slideIn));
+        // 메인 박스
+        const boxW = 480, boxH = 280;
+        const boxX = (BASE_WIDTH - boxW) / 2;
+        const boxY = 130;
+        const slideIn = Math.min(1, time * 2.5);
+        const ease = 1 - Math.pow(1 - slideIn, 3);
+        ctx.translate(0, (1 - ease) * -50);
+        ctx.globalAlpha = ease;
+
+        // 박스 배경
+        const grad = ctx.createLinearGradient(boxX, boxY, boxX, boxY + boxH);
+        grad.addColorStop(0, 'rgba(13, 71, 161, 0.95)');
+        grad.addColorStop(1, 'rgba(2, 119, 189, 0.95)');
+        ctx.fillStyle = grad;
+        this._roundRect(ctx, boxX, boxY, boxW, boxH, 16);
+        ctx.fill();
+        ctx.strokeStyle = COLORS.gold;
+        ctx.lineWidth = 3;
+        this._roundRect(ctx, boxX, boxY, boxW, boxH, 16);
+        ctx.stroke();
+
+        // 타이틀
+        ctx.shadowColor = '#000';
+        ctx.shadowBlur = 4;
+        ctx.fillStyle = COLORS.gold;
+        ctx.font = 'bold 44px sans-serif';
+        ctx.fillText('★ STAGE CLEAR ★', BASE_WIDTH / 2, boxY + 60);
+        ctx.shadowBlur = 0;
 
         // 재료 획득 연출
         if (time > 0.5) {
+            ctx.fillStyle = '#FFF';
+            ctx.font = 'bold 18px sans-serif';
+            ctx.fillText('새 재료를 얻었어요!', BASE_WIDTH / 2, boxY + 100);
+
+            // 재료 이미지
+            const matSize = 48;
+            const matX = BASE_WIDTH / 2 - matSize / 2;
+            const matY = boxY + 115;
+            const popScale = time < 0.7 ? 0.5 + (time - 0.5) * 2.5 : 1 + Math.sin(time * 4) * 0.05;
+            ctx.save();
+            ctx.translate(matX + matSize / 2, matY + matSize / 2);
+            ctx.scale(popScale, popScale);
+            this.sprite.drawMaterial(ctx, -matSize / 2, -matSize / 2, matSize, materialsCollected - 1, time);
+            ctx.restore();
+
             ctx.fillStyle = COLORS.gold;
             ctx.font = 'bold 22px sans-serif';
             const matName = MATERIAL_NAMES[materialsCollected - 1] || '재료';
-            ctx.fillText(`"${matName}" 획득!`, BASE_WIDTH / 2, 250);
+            ctx.fillText(`"${matName}"`, BASE_WIDTH / 2, boxY + 200);
+
+            // 진행도 바
+            const barW = 300;
+            const barH = 12;
+            const barX = BASE_WIDTH / 2 - barW / 2;
+            const barY = boxY + 220;
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            this._roundRect(ctx, barX, barY, barW, barH, 6);
+            ctx.fill();
+            const fillW = barW * (materialsCollected / TOTAL_MATERIALS);
+            const barGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+            barGrad.addColorStop(0, '#FFD700');
+            barGrad.addColorStop(1, '#FF8F00');
+            ctx.fillStyle = barGrad;
+            this._roundRect(ctx, barX, barY, fillW, barH, 6);
+            ctx.fill();
 
             ctx.fillStyle = '#FFF';
-            ctx.font = '16px sans-serif';
-            ctx.fillText(`재료: ${materialsCollected} / ${TOTAL_MATERIALS}`, BASE_WIDTH / 2, 290);
+            ctx.font = 'bold 13px sans-serif';
+            ctx.fillText(`${materialsCollected} / ${TOTAL_MATERIALS}`, BASE_WIDTH / 2, barY + 30);
         }
+
+        ctx.globalAlpha = 1;
+        ctx.translate(0, -(1 - ease) * -50);
 
         if (time > 1 && Math.floor(time * 2) % 2 === 0) {
             ctx.fillStyle = '#FFF';
-            ctx.font = '18px sans-serif';
-            ctx.fillText('아무 키나 눌러서 계속', BASE_WIDTH / 2, 380);
+            ctx.font = 'bold 16px sans-serif';
+            ctx.fillText(this.isMobile ? '터치해서 계속' : '아무 키나 눌러서 계속', BASE_WIDTH / 2, boxY + boxH + 30);
         }
 
         ctx.restore();
@@ -663,21 +916,50 @@ export class UIRenderer {
 
     // === 게임오버 ===
     drawGameOver(ctx, time) {
-        this._drawOverlay(ctx, 0.7);
+        // 빨간 비네팅 효과
+        const fadeIn = Math.min(1, time * 2);
+        ctx.fillStyle = `rgba(0,0,0,${0.7 * fadeIn})`;
+        ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
+        const vignette = ctx.createRadialGradient(BASE_WIDTH / 2, BASE_HEIGHT / 2, 100, BASE_WIDTH / 2, BASE_HEIGHT / 2, BASE_WIDTH / 2);
+        vignette.addColorStop(0, 'rgba(180,0,0,0)');
+        vignette.addColorStop(1, `rgba(180,0,0,${0.5 * fadeIn})`);
+        ctx.fillStyle = vignette;
+        ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
 
         ctx.save();
         ctx.textAlign = 'center';
 
-        ctx.fillStyle = COLORS.hpRed;
-        ctx.font = 'bold 44px sans-serif';
-        ctx.fillText('게임 오버', BASE_WIDTH / 2, BASE_HEIGHT / 2 - 30);
+        // 메인 박스
+        const boxW = 420, boxH = 200;
+        const boxX = (BASE_WIDTH - boxW) / 2;
+        const boxY = BASE_HEIGHT / 2 - boxH / 2;
+        ctx.fillStyle = `rgba(20,0,0,${0.9 * fadeIn})`;
+        this._roundRect(ctx, boxX, boxY, boxW, boxH, 14);
+        ctx.fill();
+        ctx.strokeStyle = `rgba(239,83,80,${fadeIn})`;
+        ctx.lineWidth = 3;
+        this._roundRect(ctx, boxX, boxY, boxW, boxH, 14);
+        ctx.stroke();
 
-        ctx.fillStyle = '#FFF';
-        ctx.font = '18px sans-serif';
-        ctx.fillText('집이 불타버렸어...', BASE_WIDTH / 2, BASE_HEIGHT / 2 + 10);
+        // 흔들리는 텍스트
+        const shakeX = (Math.random() - 0.5) * 2 * Math.max(0, 1 - time);
+        ctx.translate(shakeX, 0);
+
+        ctx.shadowColor = '#000';
+        ctx.shadowBlur = 6;
+        ctx.fillStyle = COLORS.fireRed;
+        ctx.font = 'bold 50px sans-serif';
+        ctx.fillText('GAME OVER', BASE_WIDTH / 2, boxY + 70);
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = '#FFCDD2';
+        ctx.font = '17px sans-serif';
+        ctx.fillText('집이 불타버렸어...', BASE_WIDTH / 2, boxY + 110);
 
         if (time > 1 && Math.floor(time * 2) % 2 === 0) {
-            ctx.fillText(this.isMobile ? '터치해서 메인으로!' : '아무 키나 눌러서 메인으로!', BASE_WIDTH / 2, BASE_HEIGHT / 2 + 60);
+            ctx.fillStyle = '#FFF';
+            ctx.font = 'bold 16px sans-serif';
+            ctx.fillText(this.isMobile ? '터치해서 메인으로!' : '아무 키나 눌러서 메인으로!', BASE_WIDTH / 2, boxY + 160);
         }
 
         ctx.restore();
@@ -686,7 +968,8 @@ export class UIRenderer {
     // === 승리 ===
     drawWin(ctx, score, time, coinReward) {
         const grad = ctx.createLinearGradient(0, 0, 0, BASE_HEIGHT);
-        grad.addColorStop(0, '#1565C0');
+        grad.addColorStop(0, '#0D47A1');
+        grad.addColorStop(0.5, '#1976D2');
         grad.addColorStop(1, '#4FC3F7');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
@@ -694,43 +977,99 @@ export class UIRenderer {
         ctx.save();
         ctx.textAlign = 'center';
 
-        // 축하 반짝이
+        // 폭죽 (승리 직후)
+        if (time < 4) {
+            for (let i = 0; i < 5; i++) {
+                const fwTime = (time + i * 0.7) % 2.5;
+                if (fwTime < 1.2) {
+                    const fwX = ((i * 173) % BASE_WIDTH);
+                    const fwY = 200 + Math.sin(i * 2) * 60;
+                    const numParticles = 16;
+                    const colors = ['#FFD700', '#FF6B35', '#F44336', '#4FC3F7', '#9C27B0'];
+                    const color = colors[i % colors.length];
+                    for (let p = 0; p < numParticles; p++) {
+                        const angle = (Math.PI * 2 * p) / numParticles;
+                        const dist = fwTime * 80;
+                        const px = fwX + Math.cos(angle) * dist;
+                        const py = fwY + Math.sin(angle) * dist + fwTime * fwTime * 30;
+                        ctx.fillStyle = `rgba(${this._hexR(color)},${this._hexG(color)},${this._hexB(color)},${1 - fwTime})`;
+                        ctx.beginPath();
+                        ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+        }
+
+        // 별 반짝이
         ctx.fillStyle = COLORS.gold;
-        for (let i = 0; i < 20; i++) {
-            const sx = (Math.sin(time * 2 + i * 1.3) * 0.5 + 0.5) * BASE_WIDTH;
-            const sy = (Math.cos(time * 1.7 + i * 0.9) * 0.5 + 0.5) * BASE_HEIGHT;
+        for (let i = 0; i < 30; i++) {
+            const sx = (Math.sin(time * 1.5 + i * 1.3) * 0.5 + 0.5) * BASE_WIDTH;
+            const sy = (Math.cos(time * 1.2 + i * 0.9) * 0.5 + 0.5) * BASE_HEIGHT;
+            const size = 1 + (Math.sin(time * 3 + i) + 1) * 1.5;
+            ctx.fillStyle = `rgba(255,215,0,${0.6 + Math.sin(time * 4 + i) * 0.4})`;
             ctx.beginPath();
-            ctx.arc(sx, sy, 2 + Math.sin(time * 5 + i) * 2, 0, Math.PI * 2);
+            ctx.arc(sx, sy, size, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        const bounce = Math.sin(time * 3) * 5;
+        const bounce = Math.sin(time * 3) * 8;
+        ctx.shadowColor = '#000';
+        ctx.shadowBlur = 8;
         ctx.fillStyle = COLORS.gold;
-        ctx.font = 'bold 52px sans-serif';
-        ctx.fillText('승리!', BASE_WIDTH / 2, 180 + bounce);
+        ctx.font = 'bold 64px sans-serif';
+        ctx.fillText('★ VICTORY ★', BASE_WIDTH / 2, 160 + bounce);
+        ctx.shadowBlur = 0;
 
         ctx.fillStyle = '#FFF';
         ctx.font = 'bold 24px sans-serif';
-        ctx.fillText('불 몬스터를 물리쳤다!', BASE_WIDTH / 2, 240);
+        ctx.fillText('불 몬스터를 물리쳤다!', BASE_WIDTH / 2, 230);
 
+        ctx.fillStyle = COLORS.waterLight;
         ctx.font = '18px sans-serif';
-        ctx.fillText('마을에 다시 평화가 찾아왔어!', BASE_WIDTH / 2, 280);
+        ctx.fillText('마을에 다시 평화가 찾아왔어!', BASE_WIDTH / 2, 265);
 
-        // 코인 보상
-        if (coinReward && time > 1) {
-            ctx.fillStyle = COLORS.gold;
-            ctx.font = 'bold 20px sans-serif';
-            ctx.fillText(`+${coinReward} 코인 획득!`, BASE_WIDTH / 2, 330);
+        // 점수 박스
+        if (time > 0.8) {
+            const sBoxW = 280, sBoxH = 120;
+            const sBoxX = BASE_WIDTH / 2 - sBoxW / 2;
+            const sBoxY = 295;
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            this._roundRect(ctx, sBoxX, sBoxY, sBoxW, sBoxH, 10);
+            ctx.fill();
+            ctx.strokeStyle = COLORS.gold;
+            ctx.lineWidth = 2;
+            this._roundRect(ctx, sBoxX, sBoxY, sBoxW, sBoxH, 10);
+            ctx.stroke();
+
+            ctx.fillStyle = '#FFD54F';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillText('FINAL SCORE', BASE_WIDTH / 2, sBoxY + 26);
+
+            ctx.fillStyle = '#FFF';
+            ctx.font = 'bold 28px sans-serif';
+            ctx.fillText((score || 0).toLocaleString('en-US'), BASE_WIDTH / 2, sBoxY + 60);
+
+            // 코인 보상
+            if (coinReward) {
+                ctx.fillStyle = COLORS.gold;
+                ctx.font = 'bold 18px sans-serif';
+                ctx.fillText(`+${coinReward} 코인 획득!`, BASE_WIDTH / 2, sBoxY + 95);
+            }
         }
 
         if (time > 2 && Math.floor(time * 2) % 2 === 0) {
             ctx.fillStyle = '#FFF';
-            ctx.font = '18px sans-serif';
-            ctx.fillText('아무 키나 눌러서 처음으로', BASE_WIDTH / 2, 400);
+            ctx.font = 'bold 16px sans-serif';
+            ctx.fillText(this.isMobile ? '터치해서 메인으로' : '아무 키나 눌러서 메인으로', BASE_WIDTH / 2, 460);
         }
 
         ctx.restore();
     }
+
+    _hexR(h) { return parseInt(h.substr(1, 2), 16); }
+    _hexG(h) { return parseInt(h.substr(3, 2), 16); }
+    _hexB(h) { return parseInt(h.substr(5, 2), 16); }
 
     // --- 헬퍼 ---
 

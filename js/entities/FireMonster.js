@@ -110,7 +110,14 @@ export class FireMonster extends Entity {
         return true;
     }
 
-    draw(ctx, sprite) {
+    draw(ctx, sprite, groundY) {
+        // 그림자 (날아다니는 적은 그림자가 멀어진 만큼 작아짐)
+        if (groundY !== undefined) {
+            const heightAboveGround = groundY - (this.y + this.height);
+            const shadowAlpha = Math.max(0.05, 0.22 - heightAboveGround * 0.001);
+            const shadowScale = Math.max(0.4, 1 - heightAboveGround * 0.003);
+            sprite.drawShadow(ctx, this.cx, groundY, this.width * shadowScale, shadowAlpha);
+        }
         sprite.drawFireMonster(ctx, this.x, this.y, this.width, this.height, this.type, this.time, this.hitFlash > 0, this.frozen, this.isFlying, this.attackAnim);
     }
 }
